@@ -1,6 +1,21 @@
 /**
- * Kiribati recharge system — backend Web App (v19)
+ * Kiribati recharge system — backend Web App (v20)
  * ---------------------------------------------------
+ * Change from v19: NEW -- a free, rule-based daily triage digest for
+ * Rejected submissions (sendRejectedTriageDigest()). It buckets each
+ * recently-Rejected row by how many individual OCR checks failed --
+ * exactly one failed check is a "Close call" worth a human second
+ * look (e.g. missed the 1-hour recency window by minutes but
+ * everything else matched); two or more failed checks is bucketed as
+ * "Likely genuine reject". Purely advisory: never changes Status,
+ * never approves, never emails the customer -- just emails ADMIN_EMAIL
+ * a summary. No AI/paid API involved, unlike the fuller vision-review
+ * agent discussed but not built.
+ * SETUP: run createRejectedTriageTrigger() once from the Apps Script
+ * editor (select it in the function dropdown, click Run) to schedule
+ * it daily at 9am. Optional script property TRIAGE_LOOKBACK_HOURS
+ * controls the window (default 24).
+ *
  * Change from v18: the v17 bank reference number sequence check no
  * longer requires the submitted number to be strictly higher than the
  * last one accepted -- it now allows it to land up to
@@ -825,5 +840,108 @@ function createDailyDigestTrigger() {
     .timeBased()
     .everyDays(1)
     .atHour(8)
+    .create();
+}
+
+// ---- Daily "rejected submission" triage digest ----
+//
+// Free, rule-based triage over recently Rejected rows -- no AI/paid API
+// involved. Each row's OCR Notes already records which individual checks
+// passed/failed (Ref, Cost, Acct, Success word, Bank name, Recency,
+// BankRefSeq); this counts how many of those actually failed on a row
+// and buckets it:
+//   - exactly one check failed -> "Close call" -- everything else about
+//     the payment matched, so it's the most likely spot for a genuine
+//     payment to have been wrongly rejected (e.g. missed the 1-hour
+//     recency window by a few minutes). Worth a human double-check.
+//   - two or more checks failed -> "Likely genuine reject" -- multiple
+//     independent signals disagreed, consistent with a real mismatch,
+//     reused screenshot, or fraud attempt.
+// This is purely advisory: it never changes Status, never approves
+// anything, never emails the customer -- it only emails ADMIN_EMAIL a
+// summary to make manual review faster.
+const FAILED_CHECK_PATTERNS = [
+  { label: "Reference", failedIf: /Ref:false/ },
+  { label: "Amount paid", failedIf: /Cost:false/ },
+  { label: "Account number", failedIf: /Acct:false/ },
+  { label: "Success wording", failedIf: /Success word:false/ },
+  { label: "Bank name", failedIf: /Bank name:false/ },
+  { label: "Transaction recency", failedIf: /Recency:false/ },
+  { label: "Bank reference sequence", failedIf: /BankRefSeq:\d+ \(<= last seen/ },
+];
+
+function classifyRejectedRow(ocrNotes) {
+  const notes = String(ocrNotes || "");
+  const failedChecks = FAILED_CHECK_PATTERNS
+    .filter(function (c) { return c.failedIf.test(notes); })
+    .map(function (c) { return c.label; });
+  const bucket = failedChecks.length === 1 ? "Close call" :
+    failedChecks.length === 0 ? "Unclear (no specific check flagged)" : "Likely genuine reject";
+  return { failedChecks: failedChecks, bucket: bucket };
+}
+
+function sendRejectedTriageDigest() {
+  const lookbackHours = Number(PropertiesService.getScriptProperties().getProperty("TRIAGE_LOOKBACK_HOURS") || "24");
+  const cutoff = new Date(Date.now() - lookbackHours * 3600000);
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RESPONSES_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+
+  const closeCalls = [];
+  const genuineRejects = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][COL.STATUS - 1]).toLowerCase() !== "rejected") continue;
+    const ts = new Date(data[i][COL.TIMESTAMP - 1]);
+    if (ts < cutoff) continue;
+
+    const classified = classifyRejectedRow(data[i][COL.OCR_NOTES - 1]);
+    const line = "- " + data[i][COL.REFERENCE - 1] + " | " + data[i][COL.NAME - 1] +
+      " | $" + data[i][COL.TOPUP_AMOUNT - 1] + " (paid $" + data[i][COL.COST_AMOUNT - 1] + ")" +
+      " | Failed: " + (classified.failedChecks.length ? classified.failedChecks.join(", ") : "(none flagged)") +
+      " | " + data[i][COL.SCREENSHOT_URL - 1];
+
+    if (classified.bucket === "Close call") {
+      closeCalls.push(line);
+    } else {
+      genuineRejects.push(line);
+    }
+  }
+
+  if (closeCalls.length === 0 && genuineRejects.length === 0) return;
+
+  const sections = [];
+  if (closeCalls.length > 0) {
+    sections.push(
+      "CLOSE CALLS -- only one check failed, worth a second look (" + closeCalls.length + "):\n" +
+      closeCalls.join("\n")
+    );
+  }
+  if (genuineRejects.length > 0) {
+    sections.push(
+      "LIKELY GENUINE REJECTS -- multiple checks failed (" + genuineRejects.length + "):\n" +
+      genuineRejects.join("\n")
+    );
+  }
+
+  const adminEmail = PropertiesService.getScriptProperties().getProperty("ADMIN_EMAIL")
+    || Session.getEffectiveUser().getEmail();
+  MailApp.sendEmail(
+    adminEmail,
+    "Recharge system: " + closeCalls.length + " close-call reject(s) to review",
+    "Rule-based triage of Rejected submissions from the last " + lookbackHours + " hours. " +
+      "This is advisory only -- nothing has been changed or approved automatically.\n\n" +
+      sections.join("\n\n")
+  );
+}
+
+function createRejectedTriageTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === "sendRejectedTriageDigest") ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("sendRejectedTriageDigest")
+    .timeBased()
+    .everyDays(1)
+    .atHour(9)
     .create();
 }
