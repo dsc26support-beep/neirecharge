@@ -1,6 +1,11 @@
 /**
- * Kiribati recharge system — backend Web App (v7)
+ * Kiribati recharge system — backend Web App (v8)
  * ---------------------------------------------------
+ * Change from v7: ocrImage() now works whether the Drive advanced
+ * service was added as v2 or v3 -- previously it hardcoded the v2
+ * method name (Drive.Files.insert), which throws "is not a function"
+ * if v3 (Drive.Files.create) was added instead.
+ *
  * Change from v6: the EXIF ("looks like a photo, not a screenshot")
  * check no longer blocks submission -- it was rejecting legitimate
  * screenshots that picked up EXIF data after being forwarded/re-saved
@@ -27,7 +32,8 @@
  * Phone column (D) and shift the rest left, or start a fresh sheet.
  *
  * Other setup, same as before:
- *   - Services > + > Drive API (advanced service, enables OCR)
+ *   - Services > + > Drive API (advanced service, enables OCR -- either
+ *     v2 or v3 works, ocrImage() below detects which one is enabled)
  *   - Run createApprovalTrigger() once for the manual-approval fallback
  *   - Run createDailyDigestTrigger() once for the pending-review digest
  *   - Deploy > New deployment > Web app, Execute as Me, Access: Anyone
@@ -307,8 +313,15 @@ function saveScreenshot(base64, mimeType, email) {
 
 function ocrImage(base64, mimeType) {
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, "ocr_temp");
-  const resource = { title: "OCR_temp_" + new Date().getTime() };
-  const file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: "en" });
+  const name = "OCR_temp_" + new Date().getTime();
+  const optionalArgs = { ocr: true, ocrLanguage: "en" };
+
+  // Drive API v3 renamed Files.insert -> Files.create and title -> name;
+  // support whichever version is enabled as the advanced service.
+  const file = Drive.Files.create
+    ? Drive.Files.create({ name: name }, blob, optionalArgs)
+    : Drive.Files.insert({ title: name }, blob, optionalArgs);
+
   let text = "";
   try {
     text = DocumentApp.openById(file.id).getBody().getText();
