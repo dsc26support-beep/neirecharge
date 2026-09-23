@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phone Top-Up — Kiribati</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7c3aed">
 <style>
   :root {
     --bg: #f6f7f9; --card: #ffffff; --text: #1a1a1a; --muted: #6b7280;
@@ -115,6 +117,25 @@
   .confirm-actions .go-back { background: #fff; border: 1px solid var(--border); color: var(--text); }
   .confirm-actions .ok-btn { background: var(--accent); border: none; color: #fff; font-weight: 600; }
   .confirm-actions .ok-btn:hover { background: var(--accent-hover); }
+
+  .install-banner {
+    position: fixed; top: 50%; right: 12px; transform: translateY(-50%);
+    width: 132px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    text-align: center; z-index: 60; display: none;
+  }
+  .install-banner.show { display: block; }
+  .install-banner p { margin: 0 0 8px; font-size: 0.78rem; line-height: 1.4; color: var(--text); }
+  .install-banner button {
+    width: 100%; padding: 6px 0; border-radius: 6px; border: none;
+    background: var(--accent); color: #fff; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; margin-bottom: 6px;
+  }
+  .install-banner button:hover { background: var(--accent-hover); }
+  .install-banner .dismiss {
+    background: none; color: var(--muted); font-size: 0.75rem;
+    font-weight: 400; text-decoration: underline; padding: 0; margin: 0;
+  }
 </style>
 </head>
 <body>
@@ -166,6 +187,12 @@
   <div class="legal-footer">
     <a href="terms.html">Terms</a><span class="sep">|</span><a href="privacy.html">Privacy</a>
   </div>
+</div>
+
+<div class="install-banner" id="install-banner">
+  <p>Install this app on your phone for quicker access</p>
+  <button type="button" id="install-btn">Install</button>
+  <button type="button" class="dismiss" id="install-dismiss">Not now</button>
 </div>
 
 <div class="modal-overlay" id="help-overlay">
@@ -455,6 +482,39 @@
       submitBtn.textContent = "Submit";
     }
   });
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
+  const installBanner = document.getElementById("install-banner");
+  const installBtn = document.getElementById("install-btn");
+  const installDismiss = document.getElementById("install-dismiss");
+  let deferredInstallPrompt = null;
+  let installBannerTimer = null;
+
+  function hideInstallBanner() {
+    installBanner.classList.remove("show");
+    clearTimeout(installBannerTimer);
+  }
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBanner.classList.add("show");
+    installBannerTimer = setTimeout(hideInstallBanner, 30000);
+  });
+
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    hideInstallBanner();
+  });
+
+  installDismiss.addEventListener("click", hideInstallBanner);
+  window.addEventListener("appinstalled", hideInstallBanner);
 </script>
 </body>
 </html>
