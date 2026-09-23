@@ -53,6 +53,7 @@
     border-radius: 8px; font-size: 1rem; background: #fff; color: var(--text);
   }
   .hint { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  .hint a { color: var(--accent); }
   .cost-display {
     margin-top: 10px; padding: 10px 12px; border-radius: 8px;
     background: #f5f3ff; border: 1px solid #ddd6fe; font-size: 0.95rem;
@@ -161,7 +162,10 @@
 
     <label for="email">Email address</label>
     <input type="email" id="email" placeholder="you@example.com" required>
-    <div class="hint">Your recharge code will be sent here</div>
+    <div class="hint">
+      Your recharge code will be sent here
+      <span id="clear-contact-wrap" style="display:none;"> — <a href="#" id="clear-contact-link">Not you? Clear saved details</a></span>
+    </div>
 
     <label for="amount">Top-up amount</label>
     <select id="amount" required>
@@ -285,6 +289,8 @@
   const emailInput = document.getElementById("email");
 
   const CONTACT_STORAGE_KEY = "recharge_contact";
+  const clearContactWrap = document.getElementById("clear-contact-wrap");
+  const clearContactLink = document.getElementById("clear-contact-link");
 
   function saveContactInfo(name, email) {
     try {
@@ -297,8 +303,19 @@
       const saved = JSON.parse(localStorage.getItem(CONTACT_STORAGE_KEY) || "null");
       if (saved && saved.name) nameInput.value = saved.name;
       if (saved && saved.email) emailInput.value = saved.email;
+      if (saved && (saved.name || saved.email)) clearContactWrap.style.display = "inline";
     } catch (e) {}
   })();
+
+  clearContactLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    try {
+      localStorage.removeItem(CONTACT_STORAGE_KEY);
+    } catch (err) {}
+    nameInput.value = "";
+    emailInput.value = "";
+    clearContactWrap.style.display = "none";
+  });
 
   let beforePayShownForSelection = false;
 
@@ -484,6 +501,7 @@
         fileNameDisplay.textContent = "No file selected";
         nameInput.value = payload.name;
         emailInput.value = payload.email;
+        clearContactWrap.style.display = "inline";
       } else if (result.status === "pending") {
         statusEl.textContent = "Received! We're verifying your payment and will email your code soon.";
         statusEl.className = "success";
@@ -493,6 +511,7 @@
         fileNameDisplay.textContent = "No file selected";
         nameInput.value = payload.name;
         emailInput.value = payload.email;
+        clearContactWrap.style.display = "inline";
       } else {
         throw new Error(result.message || "Something went wrong. Please try again.");
       }
