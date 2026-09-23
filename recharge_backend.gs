@@ -1,6 +1,14 @@
 /**
- * Kiribati recharge system — backend Web App (v13)
+ * Kiribati recharge system — backend Web App (v14)
  * ---------------------------------------------------
+ * Change from v13: NEW OPTIONAL SHEET TAB -- "Used Vouchers" (same
+ * columns as Vouchers: A code | B amount | C used-marker). Once a
+ * claimed voucher's email has actually sent, its row moves out of
+ * Vouchers and into "Used Vouchers" -- keeping Vouchers limited to
+ * still-available codes. If the email send fails, the claim is
+ * reverted in place as before (the row is never moved in that case).
+ * Silently does nothing if the tab doesn't exist yet.
+ *
  * Change from v12: NEW REQUIRED SHEET TAB -- "Archive" (same columns
  * as Responses: A Timestamp | B Reference | C Name | D Email |
  * E Topup Amount | F Cost Paid | G Method | H Screenshot URL |
@@ -80,6 +88,7 @@
 const RESPONSES_SHEET_NAME = "Responses";
 const VOUCHERS_SHEET_NAME = "Vouchers";
 const ARCHIVE_SHEET_NAME = "Archive";
+const USED_VOUCHERS_SHEET_NAME = "Used Vouchers";
 const ACCOUNT_NUMBER = "786149";
 
 const COL = {
@@ -465,6 +474,7 @@ function processApprovedRow(row) {
     }
     voucherSentCell.setValue(voucher.code + " (emailed)");
     archiveRow(row);
+    archiveUsedVoucher(voucher.rowIndex);
     return true;
   } catch (err) {
     voucherSentCell.setValue("ERROR: " + err.message);
@@ -484,6 +494,21 @@ function archiveRow(row) {
   const rowValues = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
   archiveSheet.appendRow(rowValues);
   sheet.deleteRow(row);
+}
+
+// Moves a claimed voucher's row out of Vouchers and into "Used Vouchers",
+// but only after its email has actually sent -- called from the same spot
+// as archiveRow(), never before. If the send fails, markVoucherUnused()
+// reverts the claim in place instead (this function is never reached), so
+// the row is never moved out from under a claim that gets rolled back.
+// Silently does nothing if the "Used Vouchers" tab hasn't been created yet.
+function archiveUsedVoucher(rowIndex) {
+  const vSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VOUCHERS_SHEET_NAME);
+  const usedSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(USED_VOUCHERS_SHEET_NAME);
+  if (!usedSheet) return;
+  const rowValues = vSheet.getRange(rowIndex, 1, 1, vSheet.getLastColumn()).getValues()[0];
+  usedSheet.appendRow(rowValues);
+  vSheet.deleteRow(rowIndex);
 }
 
 function sendStandardVoucherEmail(email, name, topupAmount, code) {
