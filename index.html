@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone Top-Up — Kiribati</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1a1a1a; --muted: #6b7280;
+    --accent: #7c3aed; --accent-hover: #6d28d9; --border: #e5e7eb;
+    --error: #dc2626; --success: #16a34a; --warn-bg: #fef9c3; --warn-border: #eab308;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); padding: 24px 16px;
+  }
+  .card {
+    max-width: 480px; margin: 0 auto; background: var(--card);
+    border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    position: relative;
+  }
+  .help-btn {
+    position: absolute; top: 16px; right: 16px;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--border); background: #fff; color: var(--muted);
+    font-size: 0.85rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1; padding: 0;
+  }
+  .help-btn:hover { background: var(--bg); color: var(--accent); border-color: var(--accent); }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 20px; font-size: 0.9rem; }
+  .pay-box {
+    background: var(--warn-bg); border: 1px solid var(--warn-border);
+    border-radius: 10px; padding: 16px; margin-bottom: 20px;
+  }
+  .pay-box .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
+  .pay-box .row span:first-child { color: var(--muted); }
+  .pay-box .row span:last-child { font-weight: 600; }
+  .ref { font-family: monospace; font-size: 1.3rem; letter-spacing: 2px; }
+  .copy-btn {
+    margin-top: 6px; padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;
+    border: 1px solid var(--border); background: #fff; cursor: pointer;
+  }
+  .pay-box .instr { font-size: 0.85rem; margin-top: 10px; color: var(--text); }
+  .pay-box .instr b { color: var(--error); }
+  label { display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }
+  input[type="text"], input[type="email"], select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 1rem; background: #fff; color: var(--text);
+  }
+  .hint { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  .cost-display {
+    margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+    background: #f5f3ff; border: 1px solid #ddd6fe; font-size: 0.95rem;
+    display: none;
+  }
+  .cost-display.show { display: block; }
+  .cost-display b { color: var(--accent); }
+
+  .file-input-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  .upload-btn {
+    display: block; width: 100%; padding: 10px 12px; text-align: center;
+    border: 1px dashed var(--border); border-radius: 8px; background: #fff;
+    color: var(--accent); font-weight: 600; font-size: 0.95rem; cursor: pointer;
+  }
+  .upload-btn:hover { background: #f5f3ff; border-color: var(--accent); }
+  #file-name-display { font-size: 0.82rem; color: var(--muted); margin-top: 6px; text-align: center; }
+
+  button[type="submit"] {
+    width: 100%; margin-top: 24px; padding: 12px; border: none;
+    border-radius: 8px; background: var(--accent); color: #fff;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+  button[type="submit"]:hover { background: var(--accent-hover); }
+  button[type="submit"]:disabled { background: #9ca3af; cursor: not-allowed; }
+  #status { margin-top: 16px; font-size: 0.9rem; text-align: center; }
+  #status.error { color: var(--error); }
+  #status.success { color: var(--success); }
+  .legal-footer {
+    text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--muted);
+  }
+  .legal-footer a { color: var(--muted); text-decoration: none; }
+  .legal-footer a:hover { color: var(--accent); }
+  .legal-footer .sep { margin: 0; padding: 0 2px; }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 12px; padding: 22px; max-width: 380px;
+    width: 100%; position: relative; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .modal-box h2 { font-size: 1.1rem; margin: 0 0 14px; }
+  .modal-box ol { padding-left: 20px; margin: 0; }
+  .modal-box li { font-size: 0.88rem; line-height: 1.6; margin-bottom: 8px; }
+  .modal-close {
+    position: absolute; top: 12px; right: 12px;
+    width: 26px; height: 26px; border-radius: 50%; border: none;
+    background: var(--bg); color: var(--muted); font-size: 0.9rem;
+    cursor: pointer; line-height: 1;
+  }
+  .modal-close:hover { background: var(--border); }
+
+  .confirm-box p { font-size: 0.92rem; line-height: 1.6; margin: 0 0 10px; }
+  .confirm-box .big { font-size: 1.15rem; font-weight: 700; text-align: center; margin: 14px 0; }
+  .confirm-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .confirm-actions button { flex: 1; padding: 10px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; }
+  .confirm-actions .go-back { background: #fff; border: 1px solid var(--border); color: var(--text); }
+  .confirm-actions .ok-btn { background: var(--accent); border: none; color: #fff; font-weight: 600; }
+  .confirm-actions .ok-btn:hover { background: var(--accent-hover); }
+</style>
+</head>
+<body>
+<div class="card">
+  <button type="button" class="help-btn" id="help-btn" aria-label="How to use this service">?</button>
+  <h1>Phone Top-Up</h1>
+  <p class="sub">Transfer payment first, then submit your proof below.</p>
+
+  <div class="pay-box">
+    <div class="row"><span>Pay to Account Number</span><span>786149</span></div>
+    <div class="row"><span>Your Reference</span><span class="ref" id="ref-code">—</span></div>
+    <button type="button" class="copy-btn" id="copy-btn">Copy Reference to Recipient</button>
+    <div class="instr">
+      When you make your Internet Banking Kiribati transfer, enter the
+      reference above in the <b>Reference to Recipient</b> field. Your
+      voucher can't be matched without it.
+    </div>
+  </div>
+
+  <form id="recharge-form">
+    <label for="name">Full name</label>
+    <input type="text" id="name" required>
+
+    <label for="email">Email address</label>
+    <input type="email" id="email" placeholder="you@example.com" required>
+    <div class="hint">Your recharge code will be sent here</div>
+
+    <label for="amount">Top-up amount</label>
+    <select id="amount" required>
+      <option value="">Loading available amounts...</option>
+    </select>
+    <div class="cost-display" id="cost-display">
+      You will pay <b id="cost-value">—</b> for a <b id="topup-value">—</b> top-up.
+    </div>
+
+    <label for="screenshot">Payment</label>
+    <label for="screenshot" class="upload-btn">Upload Screenshot</label>
+    <input type="file" id="screenshot" accept="image/*" required class="file-input-hidden">
+    <div id="file-name-display">No file selected</div>
+    <div class="hint">
+      Upload the actual screenshot from your banking app — a photo of
+      the screen won't be accepted.
+    </div>
+
+    <button type="submit" id="submit-btn">Submit</button>
+    <div id="status"></div>
+  </form>
+
+  <div class="legal-footer">
+    <a href="terms.html">Terms</a><span class="sep">|</span><a href="privacy.html">Privacy</a>
+  </div>
+</div>
+
+<div class="modal-overlay" id="help-overlay">
+  <div class="modal-box">
+    <button type="button" class="modal-close" id="modal-close" aria-label="Close">✕</button>
+    <h2>How to use this service</h2>
+    <ol>
+      <li>Fill in your name, email, and amount.</li>
+      <li>Note the payment reference shown above the form.</li>
+      <li>Transfer the <b>pay</b> amount shown (not the top-up amount) via Internet Banking Kiribati to Account 786149, entering your reference in the Reference to Recipient field.</li>
+      <li>Screenshot the completed transfer and upload it below.</li>
+      <li>Submit — your recharge code will be emailed once your payment is confirmed.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirm-overlay">
+  <div class="modal-box confirm-box">
+    <h2>Confirm before submitting</h2>
+    <p>Please double-check this matches the payment you already made:</p>
+    <div class="big">
+      <span id="confirm-topup">—</span> top-up — you paid
+      <span id="confirm-cost">—</span>
+    </div>
+    <p>Reference used: <b id="confirm-ref">—</b></p>
+    <div class="confirm-actions">
+      <button type="button" class="go-back" id="confirm-back">Go back</button>
+      <button type="button" class="ok-btn" id="confirm-ok">OK, submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Replace with your deployed Apps Script Web App URL (ends in /exec)
+  const BACKEND_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+  // Top-up value -> amount the buyer actually pays (includes fee).
+  const PRICING = [
+    { topup: 2, cost: 2.19 },
+    { topup: 3, cost: 3.29 },
+    { topup: 6, cost: 6.49 },
+    { topup: 10, cost: 10.88 },
+    { topup: 20, cost: 21.68 },
+  ];
+
+  const amountSelect = document.getElementById("amount");
+  const costDisplay = document.getElementById("cost-display");
+  const costValueEl = document.getElementById("cost-value");
+  const topupValueEl = document.getElementById("topup-value");
+
+  function populateAmountOptions(availableTopups) {
+    amountSelect.innerHTML = '<option value="">Select amount</option>';
+    PRICING.forEach((p) => {
+      if (availableTopups && availableTopups.indexOf(p.topup) === -1) return; // hidden — out of stock
+      const opt = document.createElement("option");
+      opt.value = String(p.topup);
+      opt.textContent = "$" + p.topup + " top-up — pay $" + p.cost.toFixed(2);
+      amountSelect.appendChild(opt);
+    });
+  }
+
+  populateAmountOptions(null);
+  fetch(BACKEND_URL, { method: "GET" })
+    .then((r) => r.json())
+    .then((data) => populateAmountOptions(data.availableAmounts || null))
+    .catch(() => populateAmountOptions(null));
+
+  amountSelect.addEventListener("change", () => {
+    const p = PRICING.find((x) => String(x.topup) === amountSelect.value);
+    if (!p) {
+      costDisplay.classList.remove("show");
+      return;
+    }
+    costValueEl.textContent = "$" + p.cost.toFixed(2);
+    topupValueEl.textContent = "$" + p.topup;
+    costDisplay.classList.add("show");
+  });
+
+  // Unambiguous charset: no 0/O, no 1/I.
+  const REF_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+  function generateReference() {
+    let out = "";
+    for (let i = 0; i < 5; i++) out += REF_CHARS[Math.floor(Math.random() * REF_CHARS.length)];
+    return out;
+  }
+
+  const reference = generateReference();
+  document.getElementById("ref-code").textContent = reference;
+
+  const helpBtn = document.getElementById("help-btn");
+  const helpOverlay = document.getElementById("help-overlay");
+  const modalClose = document.getElementById("modal-close");
+
+  helpBtn.addEventListener("click", () => helpOverlay.classList.add("open"));
+  modalClose.addEventListener("click", () => helpOverlay.classList.remove("open"));
+  helpOverlay.addEventListener("click", (e) => {
+    if (e.target === helpOverlay) helpOverlay.classList.remove("open");
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      helpOverlay.classList.remove("open");
+      confirmOverlay.classList.remove("open");
+    }
+  });
+
+  document.getElementById("copy-btn").addEventListener("click", () => {
+    navigator.clipboard.writeText(reference).then(() => {
+      const btn = document.getElementById("copy-btn");
+      const original = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => (btn.textContent = original), 1500);
+    });
+  });
+
+  const screenshotInput = document.getElementById("screenshot");
+  const fileNameDisplay = document.getElementById("file-name-display");
+  screenshotInput.addEventListener("change", () => {
+    fileNameDisplay.textContent = screenshotInput.files[0]
+      ? screenshotInput.files[0].name
+      : "No file selected";
+  });
+
+  const form = document.getElementById("recharge-form");
+  const statusEl = document.getElementById("status");
+  const submitBtn = document.getElementById("submit-btn");
+
+  const confirmOverlay = document.getElementById("confirm-overlay");
+  const confirmTopup = document.getElementById("confirm-topup");
+  const confirmCost = document.getElementById("confirm-cost");
+  const confirmRef = document.getElementById("confirm-ref");
+  const confirmBack = document.getElementById("confirm-back");
+  const confirmOk = document.getElementById("confirm-ok");
+
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    statusEl.textContent = "";
+    statusEl.className = "";
+
+    const email = document.getElementById("email").value.trim();
+    if (!isValidEmail(email)) {
+      statusEl.textContent = "Please enter a valid email address.";
+      statusEl.className = "error";
+      return;
+    }
+    const p = PRICING.find((x) => String(x.topup) === amountSelect.value);
+    if (!p) {
+      statusEl.textContent = "Please select an amount.";
+      statusEl.className = "error";
+      return;
+    }
+    if (!screenshotInput.files[0]) {
+      statusEl.textContent = "Please attach a screenshot.";
+      statusEl.className = "error";
+      return;
+    }
+
+    confirmTopup.textContent = "$" + p.topup;
+    confirmCost.textContent = "$" + p.cost.toFixed(2);
+    confirmRef.textContent = reference;
+    confirmOverlay.classList.add("open");
+  });
+
+  confirmBack.addEventListener("click", () => confirmOverlay.classList.remove("open"));
+  confirmOverlay.addEventListener("click", (e) => {
+    if (e.target === confirmOverlay) confirmOverlay.classList.remove("open");
+  });
+
+  confirmOk.addEventListener("click", async () => {
+    confirmOverlay.classList.remove("open");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+
+    try {
+      const p = PRICING.find((x) => String(x.topup) === amountSelect.value);
+      const file = screenshotInput.files[0];
+      const base64 = await fileToBase64(file);
+
+      const payload = {
+        reference: reference,
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        topupAmount: p.topup,
+        costAmount: p.cost,
+        method: "Internet Banking Kiribati",
+        screenshotBase64: base64,
+        screenshotMimeType: file.type || "image/jpeg",
+      };
+
+      const response = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (result.status === "approved") {
+        statusEl.textContent = "Payment confirmed! Check your email for the recharge code shortly.";
+        statusEl.className = "success";
+        form.reset();
+        costDisplay.classList.remove("show");
+        fileNameDisplay.textContent = "No file selected";
+      } else if (result.status === "pending") {
+        statusEl.textContent = "Received! We're verifying your payment and will email your code soon.";
+        statusEl.className = "success";
+        form.reset();
+        costDisplay.classList.remove("show");
+        fileNameDisplay.textContent = "No file selected";
+      } else {
+        throw new Error(result.message || "Something went wrong. Please try again.");
+      }
+    } catch (err) {
+      statusEl.textContent = err.message || "Submission failed. Please try again.";
+      statusEl.className = "error";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit";
+    }
+  });
+</script>
+</body>
+</html>
