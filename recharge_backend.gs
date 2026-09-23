@@ -1,12 +1,15 @@
 /**
- * Kiribati recharge system — backend Web App (v11)
+ * Kiribati recharge system — backend Web App (v12)
  * ---------------------------------------------------
+ * Change from v11: wired in a real TIP_CELEBRATION_GIF_URL (Giphy
+ * fireworks GIF) -- not verified live from this environment (no
+ * general web access here), worth a manual check after deploying.
+ *
  * Change from v10: dropped the "141...#" dial framing from both
  * voucher emails -- just shows the bare code now. The tip email is
  * now a full over-the-top HTML celebration (background GIF, VIP
  * "breaking news" copy) with a plain-text fallback for clients that
- * don't render HTML. TIP_CELEBRATION_GIF_URL below is a placeholder
- * -- swap in a real GIF URL before this goes live.
+ * don't render HTML.
  *
  * Change from v9: amount checking now tolerates a small underpayment
  * (up to 5 cents under still counts as a match, but always forces
@@ -453,8 +456,7 @@ function sendStandardVoucherEmail(email, name, topupAmount, code) {
   MailApp.sendEmail(String(email), "Your phone top-up code", body, { name: EMAIL_SENDER_NAME });
 }
 
-// TODO: swap in a real animated balloons/confetti GIF URL before going live.
-const TIP_CELEBRATION_GIF_URL = "PASTE_A_BALLOON_CONFETTI_GIF_URL_HERE";
+const TIP_CELEBRATION_GIF_URL = "https://media.giphy.com/media/TmT51OyQLFD7a/giphy.gif";
 
 function sendTipEmail(email, name, topupAmount, code, tipAmount) {
   const subject = "🚨 BREAKING: " + name + " IS OFFICIALLY A TOP-UP VIP 🚨";
