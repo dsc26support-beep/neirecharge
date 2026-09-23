@@ -78,8 +78,18 @@
     color: var(--accent); font-family: inherit; font-weight: 600; font-size: 0.95rem; cursor: pointer;
   }
   .upload-btn:hover { background: #f5f3ff; border-color: var(--accent); }
-  #file-name-display { font-size: 0.82rem; color: var(--muted); margin-top: 6px; text-align: center; }
+  .file-name-row {
+    display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 6px;
+  }
+  #file-name-display { font-size: 0.82rem; color: var(--muted); }
   #file-name-display.hidden { display: none; }
+  .info-btn {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--muted);
+    background: none; color: var(--muted); font-size: 0.7rem; font-style: italic; font-weight: 700;
+    line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .info-btn:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
+  .info-modal-text { font-size: 0.9rem; line-height: 1.6; margin: 0; color: var(--text); }
   .screenshot-check {
     display: none; margin: 6px auto 0; width: 32px; height: 32px;
     border-radius: 50%; border: none; background: var(--success); color: #fff;
@@ -229,12 +239,11 @@
     <label for="screenshot">Payment Proof</label>
     <button type="button" class="upload-btn" id="upload-btn-label">Upload Screenshot</button>
     <input type="file" id="screenshot" accept="image/*" required class="file-input-hidden">
-    <div id="file-name-display">No file selected</div>
-    <button type="button" id="screenshot-check" class="screenshot-check">&#10003;</button>
-    <div class="hint">
-      Upload the actual screenshot from your banking app — a photo of
-      the screen won't be accepted.
+    <div class="file-name-row">
+      <div id="file-name-display">No file selected</div>
+      <button type="button" class="info-btn" id="screenshot-info-btn" aria-label="Screenshot requirements">i</button>
     </div>
+    <button type="button" id="screenshot-check" class="screenshot-check">&#10003;</button>
 
     <button type="submit" id="submit-btn">Submit</button>
     <div id="status"></div>
@@ -269,6 +278,17 @@
       <li>Screenshot the completed transfer and upload it below.</li>
       <li>Submit — your recharge code will be emailed once your payment is confirmed.</li>
     </ol>
+  </div>
+</div>
+
+<div class="modal-overlay" id="screenshot-info-overlay">
+  <div class="modal-box">
+    <button type="button" class="modal-close" id="screenshot-info-close" aria-label="Close">✕</button>
+    <h2>Payment Proof</h2>
+    <p class="info-modal-text">
+      Upload the actual screenshot from your banking app — a photo of
+      the screen won't be accepted.
+    </p>
   </div>
 </div>
 
@@ -418,9 +438,21 @@
   helpOverlay.addEventListener("click", (e) => {
     if (e.target === helpOverlay) helpOverlay.classList.remove("open");
   });
+
+  const screenshotInfoBtn = document.getElementById("screenshot-info-btn");
+  const screenshotInfoOverlay = document.getElementById("screenshot-info-overlay");
+  const screenshotInfoClose = document.getElementById("screenshot-info-close");
+
+  screenshotInfoBtn.addEventListener("click", () => screenshotInfoOverlay.classList.add("open"));
+  screenshotInfoClose.addEventListener("click", () => screenshotInfoOverlay.classList.remove("open"));
+  screenshotInfoOverlay.addEventListener("click", (e) => {
+    if (e.target === screenshotInfoOverlay) screenshotInfoOverlay.classList.remove("open");
+  });
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       helpOverlay.classList.remove("open");
+      screenshotInfoOverlay.classList.remove("open");
       beforePayOverlay.classList.remove("open");
       document.getElementById("screenshot-preview-overlay").classList.remove("open");
     }
