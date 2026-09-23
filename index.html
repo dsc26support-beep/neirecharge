@@ -134,6 +134,7 @@
   #status { margin-top: 16px; font-size: 0.9rem; text-align: center; }
   #status.error { color: var(--error); }
   #status.success { color: var(--success); }
+  .underpay-note { display: block; margin-top: 6px; color: var(--accent); font-weight: 600; }
   .legal-footer {
     text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--muted);
   }
@@ -610,7 +611,8 @@
       const result = await response.json();
 
       if (result.status === "approved") {
-        statusEl.textContent = "Payment confirmed! Check your email for the recharge code shortly.";
+        statusEl.innerHTML = "Payment confirmed! Check your email for the recharge code shortly." +
+          (result.underTolerance ? '<span class="underpay-note">Koa kai kakoroa n ae ena roko.</span>' : "");
         statusEl.className = "success";
         saveContactInfo(payload.name, payload.email);
         form.reset();

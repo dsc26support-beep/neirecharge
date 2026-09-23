@@ -1,6 +1,14 @@
 /**
- * Kiribati recharge system — backend Web App (v17)
+ * Kiribati recharge system — backend Web App (v18)
  * ---------------------------------------------------
+ * Change from v17: a small underpayment (within UNDERPAY_TOLERANCE, 5
+ * cents) no longer blocks auto-approval on its own -- it now goes
+ * through the same as an exact-match payment, as long as every other
+ * check passes and the amount is within AUTO_APPROVE_MAX. The success
+ * response also now includes underTolerance: true/false so the
+ * frontend can show a Kiribati-language note under the confirmation
+ * message for underpaid-but-approved submissions.
+ *
  * Change from v16: NEW CHECK -- the bank's own auto-generated Reference
  * Number on the receipt (e.g. "AQC78922", distinct from the
  * buyer-typed Recipient Reference) is now extracted from the OCR text
@@ -219,14 +227,16 @@ function doPost(e) {
 
     const props = PropertiesService.getScriptProperties();
     const autoMax = Number(props.getProperty("AUTO_APPROVE_MAX") || "0");
-    const eligibleForAuto = looksValid && costAmount <= autoMax && !amountCheck.underTolerance;
+    const eligibleForAuto = looksValid && costAmount <= autoMax;
 
-    // looksValid true but not eligibleForAuto means the only thing holding
-    // it back is the underpay tolerance or being above AUTO_APPROVE_MAX --
-    // both are legitimate "needs a human to say OK" cases, so Pending
-    // Review. looksValid false means a real check failed (wrong reference,
-    // wrong account, no success/bank wording, too old, or a genuine amount
-    // mismatch) -- those are Rejected outright, not left in limbo.
+    // looksValid true but not eligibleForAuto means it's only being held
+    // back by AUTO_APPROVE_MAX -- a legitimate "needs a human to say OK"
+    // case, so Pending Review. A small underpayment (within
+    // UNDERPAY_TOLERANCE) no longer blocks auto-approval on its own --
+    // it still goes through like a matching payment. looksValid false
+    // means a real check failed (wrong reference, wrong account, no
+    // success/bank wording, too old, or a genuine amount mismatch) --
+    // those are Rejected outright, not left in limbo.
     const rowStatus = eligibleForAuto ? "Approved" : (looksValid ? "Pending Review" : "Rejected");
 
     const notes = [
@@ -258,6 +268,7 @@ function doPost(e) {
       return jsonResponse({
         status: sent ? "approved" : "pending",
         message: sent ? "Auto-approved and email sent." : "Auto-approval passed but no matching vouchers left.",
+        underTolerance: amountCheck.underTolerance,
       });
     }
 
@@ -391,7 +402,7 @@ function ocrTextContains(ocrText, needle) {
 }
 
 // Under-payment tolerance: this much under the required cost still counts
-// as a match, but always forces manual review (never auto-approves).
+// as a match and can auto-approve like an exact match (see v18 changelog).
 const UNDERPAY_TOLERANCE = 0.05;
 
 function extractPaidAmountFromText(ocrText) {
