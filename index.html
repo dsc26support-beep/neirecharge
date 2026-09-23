@@ -49,6 +49,9 @@
     margin-top: 6px; padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;
     border: 1px solid var(--border); background: #fff; cursor: pointer;
   }
+  .copy-btn.yellow {
+    background: var(--warn-border); border-color: var(--warn-border); color: #1a1a1a; font-weight: 600;
+  }
   .pay-box .instr { font-size: 0.85rem; margin-top: 10px; color: var(--text); }
   .pay-box .instr b { color: var(--error); }
   label { display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }
@@ -226,26 +229,14 @@
     <div class="big">
       Pay <span id="before-pay-cost">—</span> for a <span id="before-pay-topup">—</span> top-up
     </div>
-    <p>Reference to Recipient: <b id="before-pay-ref">—</b><br>Account Number: <b>786149</b></p>
+    <p>
+      Reference to Recipient: <b id="before-pay-ref">—</b>
+      <button type="button" class="copy-btn yellow" id="before-pay-copy-btn">Copy</button>
+      <br>Account Number: <b>786149</b>
+    </p>
     <div class="confirm-actions">
       <button type="button" class="go-back" id="before-pay-change">Change amount</button>
       <button type="button" class="ok-btn" id="before-pay-ok">Got it, I'll pay this now</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="confirm-overlay">
-  <div class="modal-box confirm-box">
-    <h2>Confirm before submitting</h2>
-    <p>Please double-check this matches the payment you already made:</p>
-    <div class="big">
-      <span id="confirm-topup">—</span> top-up — you paid
-      <span id="confirm-cost">—</span>
-    </div>
-    <p>Reference used: <b id="confirm-ref">—</b></p>
-    <div class="confirm-actions">
-      <button type="button" class="go-back" id="confirm-back">Go back</button>
-      <button type="button" class="ok-btn" id="confirm-ok">OK, submit</button>
     </div>
   </div>
 </div>
@@ -389,19 +380,22 @@
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       helpOverlay.classList.remove("open");
-      confirmOverlay.classList.remove("open");
       beforePayOverlay.classList.remove("open");
     }
   });
 
-  document.getElementById("copy-btn").addEventListener("click", () => {
-    navigator.clipboard.writeText(reference).then(() => {
-      const btn = document.getElementById("copy-btn");
-      const original = btn.textContent;
-      btn.textContent = "Copied!";
-      setTimeout(() => (btn.textContent = original), 1500);
+  function wireCopyButton(btnId) {
+    const btn = document.getElementById(btnId);
+    btn.addEventListener("click", () => {
+      navigator.clipboard.writeText(reference).then(() => {
+        const original = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => (btn.textContent = original), 1500);
+      });
     });
-  });
+  }
+  wireCopyButton("copy-btn");
+  wireCopyButton("before-pay-copy-btn");
 
   const screenshotInput = document.getElementById("screenshot");
   const fileNameDisplay = document.getElementById("file-name-display");
@@ -414,13 +408,6 @@
   const form = document.getElementById("recharge-form");
   const statusEl = document.getElementById("status");
   const submitBtn = document.getElementById("submit-btn");
-
-  const confirmOverlay = document.getElementById("confirm-overlay");
-  const confirmTopup = document.getElementById("confirm-topup");
-  const confirmCost = document.getElementById("confirm-cost");
-  const confirmRef = document.getElementById("confirm-ref");
-  const confirmBack = document.getElementById("confirm-back");
-  const confirmOk = document.getElementById("confirm-ok");
 
   function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -435,7 +422,7 @@
     });
   }
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     statusEl.textContent = "";
     statusEl.className = "";
@@ -458,24 +445,10 @@
       return;
     }
 
-    confirmTopup.textContent = "$" + p.topup;
-    confirmCost.textContent = "$" + p.cost.toFixed(2);
-    confirmRef.textContent = reference;
-    confirmOverlay.classList.add("open");
-  });
-
-  confirmBack.addEventListener("click", () => confirmOverlay.classList.remove("open"));
-  confirmOverlay.addEventListener("click", (e) => {
-    if (e.target === confirmOverlay) confirmOverlay.classList.remove("open");
-  });
-
-  confirmOk.addEventListener("click", async () => {
-    confirmOverlay.classList.remove("open");
     submitBtn.disabled = true;
     submitBtn.textContent = "Submitting...";
 
     try {
-      const p = PRICING.find((x) => String(x.topup) === amountSelect.value);
       const file = screenshotInput.files[0];
       const base64 = await fileToBase64(file);
 
