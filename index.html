@@ -46,13 +46,13 @@
   .pay-box .row span:last-child { font-weight: 600; }
   .ref { font-family: monospace; font-size: 1.3rem; letter-spacing: 2px; }
   .copy-btn {
-    margin-top: 6px; padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;
+    display: block; margin: 6px auto 0; padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;
     border: 1px solid var(--border); background: #fff; cursor: pointer;
   }
   .copy-btn.yellow {
     background: var(--warn-border); border-color: var(--warn-border); color: #1a1a1a; font-weight: 600;
   }
-  .pay-box .instr { font-size: 0.85rem; margin-top: 10px; color: var(--text); }
+  .pay-box .instr { font-size: 0.85rem; margin-top: 10px; color: var(--text); text-align: center; }
   .pay-box .instr b { color: var(--error); }
   label { display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }
   input[type="text"], input[type="email"], select {
@@ -204,7 +204,7 @@
     <div class="row"><span>Your Reference to Recipient</span><span class="ref" id="ref-code">—</span></div>
     <button type="button" class="copy-btn" id="copy-btn">Copy Reference to Recipient</button>
     <div class="instr">
-      When you make your Internet Banking Kiribati transfer, enter the
+      When you make your Internet Banking transfer, enter the
       reference above in the <b>Reference to Recipient</b> field. Your
       voucher can't be matched without it.
     </div>
