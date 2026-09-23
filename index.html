@@ -254,26 +254,9 @@
   const beforePayRef = document.getElementById("before-pay-ref");
   const beforePayChange = document.getElementById("before-pay-change");
   const beforePayOk = document.getElementById("before-pay-ok");
-  const nameInput = document.getElementById("name");
-  const emailInput = document.getElementById("email");
-
-  let beforePayShownForSelection = false;
-
-  function maybeShowBeforePay() {
-    const p = PRICING.find((x) => String(x.topup) === amountSelect.value);
-    if (!p || beforePayShownForSelection) return;
-    if (!nameInput.value.trim() || !isValidEmail(emailInput.value.trim())) return;
-
-    beforePayCost.textContent = "$" + p.cost.toFixed(2);
-    beforePayTopup.textContent = "$" + p.topup;
-    beforePayRef.textContent = reference;
-    beforePayOverlay.classList.add("open");
-    beforePayShownForSelection = true;
-  }
 
   amountSelect.addEventListener("change", () => {
     const p = PRICING.find((x) => String(x.topup) === amountSelect.value);
-    beforePayShownForSelection = false;
     if (!p) {
       costDisplay.classList.remove("show");
       return;
@@ -282,11 +265,11 @@
     topupValueEl.textContent = "$" + p.topup;
     costDisplay.classList.add("show");
 
-    maybeShowBeforePay();
+    beforePayCost.textContent = "$" + p.cost.toFixed(2);
+    beforePayTopup.textContent = "$" + p.topup;
+    beforePayRef.textContent = reference;
+    beforePayOverlay.classList.add("open");
   });
-
-  nameInput.addEventListener("blur", maybeShowBeforePay);
-  emailInput.addEventListener("blur", maybeShowBeforePay);
 
   beforePayChange.addEventListener("click", () => {
     beforePayOverlay.classList.remove("open");
