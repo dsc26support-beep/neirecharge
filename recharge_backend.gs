@@ -1,6 +1,16 @@
 /**
- * Kiribati recharge system — backend Web App (v18)
+ * Kiribati recharge system — backend Web App (v19)
  * ---------------------------------------------------
+ * Change from v18: the v17 bank reference number sequence check no
+ * longer requires the submitted number to be strictly higher than the
+ * last one accepted -- it now allows it to land up to
+ * BANK_REF_SEQ_TOLERANCE (script property, default 100) below the
+ * highest one seen so far. This covers other customers' payments
+ * arriving out of order in the bank's own numbering, which was
+ * wrongly rejecting genuine payments under the strict v17 rule, while
+ * still catching an old/reused screenshot whose number is far below
+ * the current baseline. See checkBankReferenceNumber().
+ *
  * Change from v17: a small underpayment (within UNDERPAY_TOLERANCE, 5
  * cents) no longer blocks auto-approval on its own -- it now goes
  * through the same as an exact-match payment, as long as every other
@@ -443,15 +453,18 @@ function checkAmountPaid(ocrText, costAmount) {
 // "AQC78922") -- NOT the buyer-typed Recipient Reference. It's a letter
 // prefix followed by a run of digits. Assumption (flagged as unverified):
 // the digit run only ever increases over time, so a new submission whose
-// number isn't higher than the last one we accepted is treated as
-// suspicious (most likely a reused/old screenshot) and rejected. The
-// letter prefix itself is ignored for the comparison -- only the numeric
-// part is tracked, via the LAST_BANK_REF_SEQ script property, updated only
-// when a submission is actually auto-approved (never from a
-// rejected/pending row, so a bad submission can't poison the baseline).
-// If no such number can be found in the OCR text at all, the check is not
-// enforced (ok:true, found:false) rather than treated as a failure, since
-// that's more likely an OCR miss than a real problem.
+// number is well below the last one we accepted is treated as suspicious
+// (most likely a reused/old screenshot). A BANK_REF_SEQ_TOLERANCE buffer
+// (default 100) allows a number to land slightly below the highest one
+// seen -- covers other customers' payments arriving out of order in the
+// bank's own numbering -- without opening the door to an old screenshot
+// being replayed. The letter prefix itself is ignored for the comparison
+// -- only the numeric part is tracked, via the LAST_BANK_REF_SEQ script
+// property, updated only when a submission is actually auto-approved
+// (never from a rejected/pending row, so a bad submission can't poison
+// the baseline). If no such number can be found in the OCR text at all,
+// the check is not enforced (ok:true, found:false) rather than treated
+// as a failure, since that's more likely an OCR miss than a real problem.
 function extractBankRefNumberFromText(ocrText) {
   const match = ocrText.match(/\b[A-Za-z]{2,4}(\d{4,8})\b/);
   if (!match) return null;
@@ -464,8 +477,10 @@ function checkBankReferenceNumber(ocrText) {
   if (seq === null) {
     return { ok: true, found: false, seq: null, lastSeen: null };
   }
-  const lastSeen = Number(PropertiesService.getScriptProperties().getProperty("LAST_BANK_REF_SEQ") || "0");
-  return { ok: seq > lastSeen, found: true, seq: seq, lastSeen: lastSeen };
+  const props = PropertiesService.getScriptProperties();
+  const lastSeen = Number(props.getProperty("LAST_BANK_REF_SEQ") || "0");
+  const tolerance = Number(props.getProperty("BANK_REF_SEQ_TOLERANCE") || "100");
+  return { ok: seq > lastSeen - tolerance, found: true, seq: seq, lastSeen: lastSeen };
 }
 
 function advanceLastBankRefSeq(seq) {
