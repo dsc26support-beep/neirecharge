@@ -1,6 +1,20 @@
 /**
- * Kiribati recharge system — backend Web App (v12)
+ * Kiribati recharge system — backend Web App (v13)
  * ---------------------------------------------------
+ * Change from v12: NEW REQUIRED SHEET TAB -- "Archive" (same columns
+ * as Responses: A Timestamp | B Reference | C Name | D Email |
+ * E Topup Amount | F Cost Paid | G Method | H Screenshot URL |
+ * I Screenshot Hash | J Status | K Voucher Sent | L OCR Notes).
+ * Add a header row matching Responses, place it wherever you like
+ * (tab order is cosmetic only). Once it exists, any row that's fully
+ * successful (Approved + voucher actually emailed) is automatically
+ * moved out of Responses and into Archive -- keeping Responses down
+ * to just Pending Review / unresolved rows. If the Archive tab
+ * doesn't exist yet, archiving is silently skipped (rows just stay
+ * in Responses as before -- nothing breaks). Reference and
+ * screenshot-hash dedup checks now scan both sheets, so an archived
+ * row still blocks a duplicate resubmission.
+ *
  * Change from v11: wired in a real TIP_CELEBRATION_GIF_URL (Giphy
  * fireworks GIF) -- not verified live from this environment (no
  * general web access here), worth a manual check after deploying.
@@ -65,6 +79,7 @@
 
 const RESPONSES_SHEET_NAME = "Responses";
 const VOUCHERS_SHEET_NAME = "Vouchers";
+const ARCHIVE_SHEET_NAME = "Archive";
 const ACCOUNT_NUMBER = "786149";
 
 const COL = {
@@ -222,11 +237,23 @@ function isRateLimited(email) {
 
 // ---- Reference dedup ----
 
+// Rows that were Approved + emailed get moved out of Responses and into
+// Archive (see archiveRow()), so dedup checks must scan both sheets --
+// otherwise a reference/screenshot from an already-completed transaction
+// would look unused once it's archived, letting someone claim a second
+// voucher for the same real payment.
+function getResponsesAndArchiveRows() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const responsesData = ss.getSheetByName(RESPONSES_SHEET_NAME).getDataRange().getValues().slice(1);
+  const archiveSheet = ss.getSheetByName(ARCHIVE_SHEET_NAME);
+  const archiveData = archiveSheet ? archiveSheet.getDataRange().getValues().slice(1) : [];
+  return responsesData.concat(archiveData);
+}
+
 function isReferenceAlreadyUsed(reference) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RESPONSES_SHEET_NAME);
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (normalize(String(data[i][COL.REFERENCE - 1] || "")) === reference) return true;
+  const rows = getResponsesAndArchiveRows();
+  for (let i = 0; i < rows.length; i++) {
+    if (normalize(String(rows[i][COL.REFERENCE - 1] || "")) === reference) return true;
   }
   return false;
 }
@@ -276,10 +303,9 @@ function computeImageHash(bytes) {
 }
 
 function isScreenshotAlreadyUsed(hash) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RESPONSES_SHEET_NAME);
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][COL.SCREENSHOT_HASH - 1] || "") === hash) return true;
+  const rows = getResponsesAndArchiveRows();
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][COL.SCREENSHOT_HASH - 1] || "") === hash) return true;
   }
   return false;
 }
@@ -438,12 +464,26 @@ function processApprovedRow(row) {
       sendStandardVoucherEmail(email, name, topupAmount, voucher.code);
     }
     voucherSentCell.setValue(voucher.code + " (emailed)");
+    archiveRow(row);
     return true;
   } catch (err) {
     voucherSentCell.setValue("ERROR: " + err.message);
     markVoucherUnused(voucher.rowIndex);
     return false;
   }
+}
+
+// Moves a fully successful row (Approved + voucher actually emailed) out of
+// Responses and into Archive, keeping the active sheet limited to Pending
+// Review / unresolved rows. Silently does nothing if the Archive tab hasn't
+// been created yet, so a missing tab never breaks voucher delivery.
+function archiveRow(row) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RESPONSES_SHEET_NAME);
+  const archiveSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ARCHIVE_SHEET_NAME);
+  if (!archiveSheet) return;
+  const rowValues = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+  archiveSheet.appendRow(rowValues);
+  sheet.deleteRow(row);
 }
 
 function sendStandardVoucherEmail(email, name, topupAmount, code) {
