@@ -405,7 +405,7 @@
   const fileNameDisplay = document.getElementById("file-name-display");
   screenshotInput.addEventListener("change", () => {
     fileNameDisplay.textContent = screenshotInput.files[0]
-      ? screenshotInput.files[0].name
+      ? "Uploaded: " + screenshotInput.files[0].name
       : "No file selected";
   });
 
