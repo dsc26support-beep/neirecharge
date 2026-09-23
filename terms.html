@@ -18,21 +18,120 @@
     background: var(--bg); color: var(--text); padding: 24px 16px;
   }
   .card {
-    max-width: 480px; margin: 0 auto; background: var(--card);
+    max-width: 560px; margin: 0 auto; background: var(--card);
     border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  h1 { font-size: 1.4rem; margin: 0 0 16px; }
-  p { line-height: 1.6; color: var(--text); }
-  .muted { color: var(--muted); font-size: 0.9rem; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  h2 { font-size: 1.05rem; margin: 24px 0 8px; }
+  p, li { line-height: 1.6; color: var(--text); }
+  .updated { color: var(--muted); font-size: 0.85rem; margin: 0 0 20px; }
   a { color: var(--accent); }
-  .back { display: inline-block; margin-top: 20px; font-size: 0.9rem; }
+  .back { display: inline-block; margin-top: 24px; font-size: 0.9rem; }
+  .legal-footer { text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--muted); }
+  .legal-footer a { color: var(--muted); text-decoration: none; }
+  .legal-footer a:hover { color: var(--accent); }
+  .legal-footer .sep { margin: 0; padding: 0 2px; }
+  .more-dropdown { position: relative; display: inline-block; }
+  .more-dropdown > button {
+    background: none; border: none; color: var(--muted); font-size: 0.8rem;
+    font-family: inherit; cursor: pointer; padding: 0;
+  }
+  .more-dropdown > button:hover { color: var(--accent); }
+  .more-menu {
+    display: none; position: absolute; bottom: 100%; left: 50%;
+    transform: translateX(-50%); margin-bottom: 6px; background: #fff;
+    border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15); padding: 6px 0; min-width: 150px; z-index: 70;
+  }
+  .more-menu.open { display: block; }
+  .more-menu a {
+    display: block; padding: 6px 14px; font-size: 0.8rem;
+    color: var(--text); text-decoration: none; white-space: nowrap;
+  }
+  .more-menu a:hover { background: var(--bg); color: var(--accent); }
 </style>
 </head>
 <body>
 <div class="card">
   <h1>Terms of Service</h1>
-  <p>By using this service you agree to provide accurate payment information and a genuine screenshot of your completed transfer. Submissions that fail verification will not be processed.</p>
+  <p class="updated">Nei Recharge — Phone Top-Up Kiribati, operated by MainKT Enterprises</p>
+
+  <h2>1. Acceptance of these Terms</h2>
+  <p>By using this website to submit a payment and request a phone recharge voucher (the "Service"), you agree to these Terms of Service. If you do not agree, please do not use the Service.</p>
+
+  <h2>2. What the Service Does</h2>
+  <p>The Service lets you transfer payment via Internet Banking Kiribati and submit proof of that payment (a screenshot) in exchange for a prepaid phone recharge code ("voucher"). Submissions are checked automatically and, where automatic checks are inconclusive, reviewed manually before a voucher is issued.</p>
+
+  <h2>3. Eligibility</h2>
+  <p>You must be able to make a valid Internet Banking Kiribati transfer and provide accurate contact information. You are responsible for entering the correct payment reference, transferring the exact amount shown, and uploading a genuine, unaltered screenshot of your own completed transfer.</p>
+
+  <h2>4. How Verification Works</h2>
+  <p>When you submit a screenshot, the Service reads its contents to check the payment reference, amount, destination account, and transfer date, among other signals. A submission that clearly matches may be approved automatically; anything else is held for manual review. We may decline to issue a voucher if we cannot verify that a genuine, matching payment was made.</p>
+
+  <h2>5. Fees and Pricing</h2>
+  <p>The amount you are asked to pay for each top-up already includes the Service's fee. This is shown to you before you transfer, and again as a confirmation step. You are responsible for transferring the correct amount.</p>
+
+  <h2>6. Voucher Delivery</h2>
+  <p>Once your payment is verified and approved, your voucher code is emailed to the address you provided. Delivery times may vary, particularly for submissions that require manual review. We are not responsible for delays caused by your email provider, incorrect email addresses you provide, or third-party network issues.</p>
+
+  <h2>7. Refunds</h2>
+  <p>Once a voucher code has been issued and emailed, the transaction is final and non-refundable. If your payment could not be verified, was submitted in error, or has not been resolved, contact support before assuming a refund is available — see our <a href="refund.html">Refund Policy</a> for full details.</p>
+
+  <h2>8. Prohibited Conduct</h2>
+  <p>You agree not to:</p>
+  <ul>
+    <li>Submit a fake, altered, reused, or someone else's payment screenshot;</li>
+    <li>Attempt to claim more than one voucher for a single genuine payment;</li>
+    <li>Attempt to bypass rate limits, verification checks, or duplicate-submission protections;</li>
+    <li>Use the Service for any unlawful purpose, including fraud or money laundering.</li>
+  </ul>
+  <p>We may refuse service, withhold a voucher, or take other appropriate action in response to suspected abuse of the Service.</p>
+
+  <h2>9. No Guarantee of Availability</h2>
+  <p>Voucher stock for a given top-up amount may sell out. Submitting a payment does not guarantee a voucher is available; if none remain for the amount you paid, we will contact you to resolve the matter (see our <a href="refund.html">Refund Policy</a>).</p>
+
+  <h2>10. Limitation of Liability</h2>
+  <p>The Service is provided on an "as is" basis. To the fullest extent permitted by law, MainKT Enterprises is not liable for indirect or consequential losses, delays caused by banks, email providers, or other third parties, or losses arising from information you provided incorrectly. Nothing in these Terms excludes liability that cannot lawfully be excluded.</p>
+
+  <h2>11. Your Data</h2>
+  <p>Information you submit is handled as described in our <a href="privacy.html">Privacy Policy</a>.</p>
+
+  <h2>12. Changes to These Terms</h2>
+  <p>We may update these Terms from time to time. Continued use of the Service after changes are posted means you accept the updated Terms.</p>
+
+  <h2>13. Governing Law</h2>
+  <p>These Terms are governed by the laws of Kiribati.</p>
+
+  <h2>14. Contact</h2>
+  <p>Questions about these Terms can be sent to <a href="mailto:admin@mwakete.com">admin@mwakete.com</a>, or via our <a href="contact.html">Contact / Support</a> page.</p>
+
   <a class="back" href="index.html">&larr; Back to top-up form</a>
+
+  <div class="legal-footer">
+    <a href="terms.html">Terms</a><span class="sep">|</span><a href="privacy.html">Privacy</a><span class="sep">|</span>
+    <span class="more-dropdown">
+      <button type="button" id="more-toggle">More &#9662;</button>
+      <span class="more-menu" id="more-menu">
+        <a href="refund.html">Refund Policy</a>
+        <a href="contact.html">Contact / Support</a>
+      </span>
+    </span>
+  </div>
 </div>
+<script>
+  (function () {
+    const moreToggle = document.getElementById("more-toggle");
+    const moreMenu = document.getElementById("more-menu");
+    if (!moreToggle || !moreMenu) return;
+    moreToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      moreMenu.classList.toggle("open");
+    });
+    document.addEventListener("click", () => moreMenu.classList.remove("open"));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") moreMenu.classList.remove("open");
+    });
+  })();
+</script>
 </body>
 </html>
