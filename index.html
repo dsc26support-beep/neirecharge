@@ -52,6 +52,9 @@
   .copy-btn.yellow {
     background: var(--warn-border); border-color: var(--warn-border); color: #1a1a1a; font-weight: 600;
   }
+  .copy-btn.inline { display: inline-block; margin: 0; }
+  .ref-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 14px; }
+  .ref-row b { font-family: monospace; font-size: 1.15rem; letter-spacing: 1px; }
   .pay-box .instr { font-size: 0.85rem; margin-top: 10px; color: var(--text); text-align: center; }
   .pay-box .instr b { color: var(--error); }
   label { display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }
@@ -307,11 +310,11 @@
     <div class="big">
       Pay <span id="before-pay-cost">—</span>
     </div>
-    <p>
-      Reference to Recipient: <b id="before-pay-ref">—</b>
-      <button type="button" class="copy-btn yellow" id="before-pay-copy-btn">Copy</button>
-      <br>Account Number: <b>786149</b>
-    </p>
+    <p style="text-align: center; margin-bottom: 6px;">Reference to Recipient:</p>
+    <div class="ref-row">
+      <b id="before-pay-ref">—</b>
+      <button type="button" class="copy-btn yellow inline" id="before-pay-copy-btn">Copy</button>
+    </div>
     <div class="confirm-actions">
       <button type="button" class="go-back" id="before-pay-change">Change amount</button>
       <button type="button" class="ok-btn" id="before-pay-ok">I'll PAY and SCREENSHOT it !</button>
