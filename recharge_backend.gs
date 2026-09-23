@@ -4,7 +4,7 @@
  * Change from v18: the v17 bank reference number sequence check no
  * longer requires the submitted number to be strictly higher than the
  * last one accepted -- it now allows it to land up to
- * BANK_REF_SEQ_TOLERANCE (script property, default 100) below the
+ * BANK_REF_SEQ_TOLERANCE (script property, default 400) below the
  * highest one seen so far. This covers other customers' payments
  * arriving out of order in the bank's own numbering, which was
  * wrongly rejecting genuine payments under the strict v17 rule, while
@@ -455,7 +455,7 @@ function checkAmountPaid(ocrText, costAmount) {
 // the digit run only ever increases over time, so a new submission whose
 // number is well below the last one we accepted is treated as suspicious
 // (most likely a reused/old screenshot). A BANK_REF_SEQ_TOLERANCE buffer
-// (default 100) allows a number to land slightly below the highest one
+// (default 400) allows a number to land slightly below the highest one
 // seen -- covers other customers' payments arriving out of order in the
 // bank's own numbering -- without opening the door to an old screenshot
 // being replayed. The letter prefix itself is ignored for the comparison
@@ -479,7 +479,7 @@ function checkBankReferenceNumber(ocrText) {
   }
   const props = PropertiesService.getScriptProperties();
   const lastSeen = Number(props.getProperty("LAST_BANK_REF_SEQ") || "0");
-  const tolerance = Number(props.getProperty("BANK_REF_SEQ_TOLERANCE") || "100");
+  const tolerance = Number(props.getProperty("BANK_REF_SEQ_TOLERANCE") || "400");
   return { ok: seq > lastSeen - tolerance, found: true, seq: seq, lastSeen: lastSeen };
 }
 
