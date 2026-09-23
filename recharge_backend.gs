@@ -238,9 +238,8 @@ function doPost(e) {
     if (rowStatus === "Rejected") {
       return jsonResponse({
         status: "rejected",
-        message: "We're sorry, but we weren't able to verify this payment against the details provided, " +
-          "so we can't proceed with it at this time. If you believe this is a mistake, please contact us " +
-          "at neirecharge@gmail.com with your reference code and screenshot, and we'll be happy to take a closer look.",
+        message: "We couldn't verify this payment against your submission details, so we can't proceed. " +
+          "If this seems wrong, email neirecharge@gmail.com with your reference code.",
       });
     }
 
