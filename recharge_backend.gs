@@ -1,6 +1,13 @@
 /**
- * Kiribati recharge system — backend Web App (v6)
+ * Kiribati recharge system — backend Web App (v7)
  * ---------------------------------------------------
+ * Change from v6: the EXIF ("looks like a photo, not a screenshot")
+ * check no longer blocks submission -- it was rejecting legitimate
+ * screenshots that picked up EXIF data after being forwarded/re-saved
+ * through another app. It's now recorded as "Exif:true/false" in the
+ * OCR Notes column for visibility only, and no longer affects
+ * auto-approval eligibility.
+ *
  * Change from v5: the phone number field was removed from the form
  * (the voucher code isn't tied to any specific number — the buyer
  * dials it on whichever phone they're topping up). Rate limiting and
@@ -91,12 +98,7 @@ function doPost(e) {
     if (isTooSmall(imageBytes)) {
       return jsonResponse({ status: "error", message: "That image looks too small or empty. Please re-upload the screenshot." });
     }
-    if (hasExifMarker(imageBytes)) {
-      return jsonResponse({
-        status: "error",
-        message: "This looks like a photo, not a screenshot. Please upload the actual screenshot from your banking app.",
-      });
-    }
+    const isLikelyPhoto = hasExifMarker(imageBytes);
 
     const screenshotHash = computeImageHash(imageBytes);
     if (isScreenshotAlreadyUsed(screenshotHash)) {
@@ -124,6 +126,7 @@ function doPost(e) {
       "Ref:" + refMatched, "Cost:" + amountMatched, "Acct:" + acctMatched,
       "Success word:" + successMatched, "Bank name:" + bankMatched,
       "Recency:" + recency.ok + " (" + recency.note + ")",
+      "Exif:" + isLikelyPhoto,
     ].join(" | ");
 
     const row = appendResponseRow({
