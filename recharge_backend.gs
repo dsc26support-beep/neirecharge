@@ -1,6 +1,23 @@
 /**
- * Kiribati recharge system — backend Web App (v16)
+ * Kiribati recharge system — backend Web App (v17)
  * ---------------------------------------------------
+ * Change from v16: NEW CHECK -- the bank's own auto-generated Reference
+ * Number on the receipt (e.g. "AQC78922", distinct from the
+ * buyer-typed Recipient Reference) is now extracted from the OCR text
+ * and its numeric part must be higher than the last one we accepted, or
+ * the submission is Rejected (same treatment as the other hard-fail
+ * checks). The last-seen number is only advanced on a real
+ * auto-approval, never on a rejected/pending row, so a bad submission
+ * can't move the baseline. If no such number is found in the OCR text
+ * at all, the check isn't enforced (more likely an OCR miss than a real
+ * problem) -- see checkBankReferenceNumber()/extractBankRefNumberFromText().
+ * IMPORTANT CAVEAT: this assumes ANZ's reference numbers are reliably
+ * increasing, which hasn't been independently verified -- worth
+ * watching the OCR Notes "BankRefSeq" column after deploying in case it
+ * starts wrongly rejecting genuine payments (e.g. if the numbering
+ * resets or isn't strictly per-account sequential). If that happens,
+ * clear the LAST_BANK_REF_SEQ script property to reset the baseline.
+ *
  * Change from v15: submissions that fail verification now split into
  * two outcomes instead of always landing in "Pending Review":
  *   - A real check failure (wrong reference, wrong account, missing
@@ -195,8 +212,10 @@ function doPost(e) {
     const amountMatched = amountCheck.matched;
     const tipAmount = amountCheck.tipAmount;
 
+    const bankRefCheck = checkBankReferenceNumber(ocrText);
+
     const looksValid = refMatched && amountMatched && acctMatched &&
-      successMatched && bankMatched && recency.ok;
+      successMatched && bankMatched && recency.ok && bankRefCheck.ok;
 
     const props = PropertiesService.getScriptProperties();
     const autoMax = Number(props.getProperty("AUTO_APPROVE_MAX") || "0");
@@ -217,6 +236,9 @@ function doPost(e) {
       "Exif:" + isLikelyPhoto,
       "Paid:" + (amountCheck.paidAmount !== null ? amountCheck.paidAmount.toFixed(2) : "n/a"),
       "Tip:" + tipAmount.toFixed(2),
+      "BankRefSeq:" + (bankRefCheck.found
+        ? bankRefCheck.seq + (bankRefCheck.ok ? " (OK, last was " + bankRefCheck.lastSeen + ")" : " (<= last seen " + bankRefCheck.lastSeen + ")")
+        : "not found"),
     ].join(" | ");
 
     const row = appendResponseRow({
@@ -226,6 +248,10 @@ function doPost(e) {
       status: rowStatus,
       ocrNotes: notes,
     });
+
+    if (eligibleForAuto && bankRefCheck.found) {
+      advanceLastBankRefSeq(bankRefCheck.seq);
+    }
 
     if (eligibleForAuto) {
       const sent = processApprovedRow(row);
@@ -398,6 +424,45 @@ function checkAmountPaid(ocrText, costAmount) {
     return { matched: true, paidAmount: paidAmount, tipAmount: 0, underTolerance: true };
   }
   return { matched: false, paidAmount: paidAmount, tipAmount: 0, underTolerance: false };
+}
+
+// ---- Bank reference number sequence check ----
+//
+// ANZ's own auto-generated Reference Number on the receipt (e.g.
+// "AQC78922") -- NOT the buyer-typed Recipient Reference. It's a letter
+// prefix followed by a run of digits. Assumption (flagged as unverified):
+// the digit run only ever increases over time, so a new submission whose
+// number isn't higher than the last one we accepted is treated as
+// suspicious (most likely a reused/old screenshot) and rejected. The
+// letter prefix itself is ignored for the comparison -- only the numeric
+// part is tracked, via the LAST_BANK_REF_SEQ script property, updated only
+// when a submission is actually auto-approved (never from a
+// rejected/pending row, so a bad submission can't poison the baseline).
+// If no such number can be found in the OCR text at all, the check is not
+// enforced (ok:true, found:false) rather than treated as a failure, since
+// that's more likely an OCR miss than a real problem.
+function extractBankRefNumberFromText(ocrText) {
+  const match = ocrText.match(/\b[A-Za-z]{2,4}(\d{4,8})\b/);
+  if (!match) return null;
+  const seq = parseInt(match[1], 10);
+  return isNaN(seq) ? null : seq;
+}
+
+function checkBankReferenceNumber(ocrText) {
+  const seq = extractBankRefNumberFromText(ocrText);
+  if (seq === null) {
+    return { ok: true, found: false, seq: null, lastSeen: null };
+  }
+  const lastSeen = Number(PropertiesService.getScriptProperties().getProperty("LAST_BANK_REF_SEQ") || "0");
+  return { ok: seq > lastSeen, found: true, seq: seq, lastSeen: lastSeen };
+}
+
+function advanceLastBankRefSeq(seq) {
+  const props = PropertiesService.getScriptProperties();
+  const lastSeen = Number(props.getProperty("LAST_BANK_REF_SEQ") || "0");
+  if (seq > lastSeen) {
+    props.setProperty("LAST_BANK_REF_SEQ", String(seq));
+  }
 }
 
 function ocrContainsSuccessWord(ocrText) {
