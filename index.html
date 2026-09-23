@@ -180,7 +180,7 @@
       <option value="">Loading available amounts...</option>
     </select>
     <div class="cost-display" id="cost-display">
-      You will pay <b id="cost-value">—</b> for a <b id="topup-value">—</b> top-up.
+      You will pay <b id="cost-value">—</b>.
     </div>
 
     <label for="screenshot">Payment Proof</label>
@@ -257,7 +257,6 @@
   const amountSelect = document.getElementById("amount");
   const costDisplay = document.getElementById("cost-display");
   const costValueEl = document.getElementById("cost-value");
-  const topupValueEl = document.getElementById("topup-value");
 
   function populateAmountOptions(availableTopups) {
     amountSelect.innerHTML = '<option value="">Select amount</option>';
@@ -336,7 +335,6 @@
       return;
     }
     costValueEl.textContent = "$" + p.cost.toFixed(2);
-    topupValueEl.textContent = "$" + p.topup;
     costDisplay.classList.add("show");
 
     maybeShowBeforePay();
