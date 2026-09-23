@@ -58,6 +58,7 @@
   .pay-box .instr { font-size: 0.85rem; margin-top: 10px; color: var(--text); text-align: center; }
   .pay-box .instr b { color: var(--error); }
   label { display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }
+  label.label-with-info { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   input[type="text"], input[type="email"], select {
     width: 100%; padding: 10px 12px; border: 1px solid var(--border);
     border-radius: 8px; font-size: 1rem; background: #fff; color: var(--text);
@@ -89,8 +90,8 @@
   #file-name-display { font-size: 0.82rem; color: var(--muted); }
   #file-name-display.hidden { display: none; }
   .info-btn {
-    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--muted);
-    background: none; color: var(--muted); font-size: 0.7rem; font-style: italic; font-weight: 700;
+    flex-shrink: 0; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--muted);
+    background: none; color: var(--muted); font-size: 0.6rem; font-style: italic; font-weight: 700;
     line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
   }
   .info-btn:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
@@ -245,12 +246,14 @@
       You will pay <b id="cost-value">—</b>.
     </div>
 
-    <label for="screenshot">Payment Proof</label>
+    <label for="screenshot" class="label-with-info">
+      Payment Proof
+      <button type="button" class="info-btn" id="screenshot-info-btn" aria-label="Screenshot requirements">i</button>
+    </label>
     <button type="button" class="upload-btn" id="upload-btn-label">Upload Screenshot</button>
     <input type="file" id="screenshot" accept="image/*" required class="file-input-hidden">
     <div class="file-name-row">
       <div id="file-name-display">No file selected</div>
-      <button type="button" class="info-btn" id="screenshot-info-btn" aria-label="Screenshot requirements">i</button>
     </div>
     <button type="button" id="screenshot-check" class="screenshot-check">&#10003;</button>
 
