@@ -1,6 +1,19 @@
 /**
- * Kiribati recharge system — backend Web App (v15)
+ * Kiribati recharge system — backend Web App (v16)
  * ---------------------------------------------------
+ * Change from v15: submissions that fail verification now split into
+ * two outcomes instead of always landing in "Pending Review":
+ *   - A real check failure (wrong reference, wrong account, missing
+ *     success/bank wording, too old, or a genuine amount mismatch)
+ *     -> Status "Rejected", customer sees a kind, professional
+ *     rejection message inviting them to contact support if they
+ *     think it's a mistake. Row stays in Responses (not archived),
+ *     so it can still be manually approved later if needed.
+ *   - Fully valid but held back only by the underpay tolerance or
+ *     being above AUTO_APPROVE_MAX -> still "Pending Review" as
+ *     before, since those are legitimate "needs a human OK" cases,
+ *     not failures.
+ *
  * Change from v14: both client-facing voucher emails now end with a
  * shared footer -- pill-button links to Terms/Privacy/Refund
  * Policy/Contact (HTML) or plain URLs (plain-text fallback), the
@@ -189,6 +202,14 @@ function doPost(e) {
     const autoMax = Number(props.getProperty("AUTO_APPROVE_MAX") || "0");
     const eligibleForAuto = looksValid && costAmount <= autoMax && !amountCheck.underTolerance;
 
+    // looksValid true but not eligibleForAuto means the only thing holding
+    // it back is the underpay tolerance or being above AUTO_APPROVE_MAX --
+    // both are legitimate "needs a human to say OK" cases, so Pending
+    // Review. looksValid false means a real check failed (wrong reference,
+    // wrong account, no success/bank wording, too old, or a genuine amount
+    // mismatch) -- those are Rejected outright, not left in limbo.
+    const rowStatus = eligibleForAuto ? "Approved" : (looksValid ? "Pending Review" : "Rejected");
+
     const notes = [
       "Ref:" + refMatched, "Cost:" + amountMatched, "Acct:" + acctMatched,
       "Success word:" + successMatched, "Bank name:" + bankMatched,
@@ -202,7 +223,7 @@ function doPost(e) {
       reference: reference, name: name, email: email,
       topupAmount: topupAmount, costAmount: costAmount, method: method,
       screenshotUrl: screenshotUrl, screenshotHash: screenshotHash,
-      status: eligibleForAuto ? "Approved" : "Pending Review",
+      status: rowStatus,
       ocrNotes: notes,
     });
 
@@ -211,6 +232,15 @@ function doPost(e) {
       return jsonResponse({
         status: sent ? "approved" : "pending",
         message: sent ? "Auto-approved and email sent." : "Auto-approval passed but no matching vouchers left.",
+      });
+    }
+
+    if (rowStatus === "Rejected") {
+      return jsonResponse({
+        status: "rejected",
+        message: "We're sorry, but we weren't able to verify this payment against the details provided, " +
+          "so we can't proceed with it at this time. If you believe this is a mistake, please contact us " +
+          "at neirecharge@gmail.com with your reference code and screenshot, and we'll be happy to take a closer look.",
       });
     }
 
