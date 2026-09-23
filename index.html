@@ -284,6 +284,22 @@
   const nameInput = document.getElementById("name");
   const emailInput = document.getElementById("email");
 
+  const CONTACT_STORAGE_KEY = "recharge_contact";
+
+  function saveContactInfo(name, email) {
+    try {
+      localStorage.setItem(CONTACT_STORAGE_KEY, JSON.stringify({ name, email }));
+    } catch (e) {}
+  }
+
+  (function prefillContactInfo() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(CONTACT_STORAGE_KEY) || "null");
+      if (saved && saved.name) nameInput.value = saved.name;
+      if (saved && saved.email) emailInput.value = saved.email;
+    } catch (e) {}
+  })();
+
   let beforePayShownForSelection = false;
 
   function maybeShowBeforePay() {
@@ -462,15 +478,21 @@
       if (result.status === "approved") {
         statusEl.textContent = "Payment confirmed! Check your email for the recharge code shortly.";
         statusEl.className = "success";
+        saveContactInfo(payload.name, payload.email);
         form.reset();
         costDisplay.classList.remove("show");
         fileNameDisplay.textContent = "No file selected";
+        nameInput.value = payload.name;
+        emailInput.value = payload.email;
       } else if (result.status === "pending") {
         statusEl.textContent = "Received! We're verifying your payment and will email your code soon.";
         statusEl.className = "success";
+        saveContactInfo(payload.name, payload.email);
         form.reset();
         costDisplay.classList.remove("show");
         fileNameDisplay.textContent = "No file selected";
+        nameInput.value = payload.name;
+        emailInput.value = payload.email;
       } else {
         throw new Error(result.message || "Something went wrong. Please try again.");
       }
@@ -498,8 +520,13 @@
     clearTimeout(installBannerTimer);
   }
 
+  const isAppInstalled =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
+    if (isAppInstalled) return;
     deferredInstallPrompt = e;
     installBanner.classList.add("show");
     installBannerTimer = setTimeout(hideInstallBanner, 30000);
