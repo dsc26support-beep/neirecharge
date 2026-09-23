@@ -141,25 +141,7 @@
   }
   .legal-footer a { color: var(--muted); text-decoration: none; }
   .legal-footer a:hover { color: var(--accent); }
-  .legal-footer .sep { margin: 0; padding: 0 2px; }
-  .more-dropdown { position: relative; display: inline-block; }
-  .more-dropdown > button {
-    background: none; border: none; color: var(--muted); font-size: 0.8rem;
-    font-family: inherit; cursor: pointer; padding: 0;
-  }
-  .more-dropdown > button:hover { color: var(--accent); }
-  .more-menu {
-    display: none; position: absolute; bottom: 100%; left: 50%;
-    transform: translateX(-50%); margin-bottom: 6px; background: #fff;
-    border: 1px solid var(--border); border-radius: 8px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.15); padding: 6px 0; min-width: 150px; z-index: 70;
-  }
-  .more-menu.open { display: block; }
-  .more-menu a {
-    display: block; padding: 6px 14px; font-size: 0.8rem;
-    color: var(--text); text-decoration: none; white-space: nowrap;
-  }
-  .more-menu a:hover { background: var(--bg); color: var(--accent); }
+  .legal-footer .dot { color: #d1d5db; font-size: 0.6rem; margin: 0 6px; }
   .copyright { text-align: center; margin-top: 6px; font-size: 0.7rem; color: var(--muted); }
 
   .modal-overlay {
@@ -261,14 +243,7 @@
   </form>
 
   <div class="legal-footer">
-    <a href="terms.html">Terms</a><span class="sep">|</span><a href="privacy.html">Privacy</a><span class="sep">|</span>
-    <span class="more-dropdown">
-      <button type="button" id="more-toggle">More &#9662;</button>
-      <span class="more-menu" id="more-menu">
-        <a href="refund.html">Refund Policy</a>
-        <a href="contact.html">Contact / Support</a>
-      </span>
-    </span>
+    <a href="terms.html">Terms</a><span class="dot">&#8226;</span><a href="privacy.html">Privacy</a><span class="dot">&#8226;</span><a href="refund.html">Refund</a><span class="dot">&#8226;</span><a href="contact.html">Contact</a>
   </div>
   <div class="copyright">©MainKT Enterprises</div>
 </div>
@@ -681,19 +656,6 @@
   installDismiss.addEventListener("click", hideInstallBanner);
   window.addEventListener("appinstalled", hideInstallBanner);
 
-  (function () {
-    const moreToggle = document.getElementById("more-toggle");
-    const moreMenu = document.getElementById("more-menu");
-    if (!moreToggle || !moreMenu) return;
-    moreToggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      moreMenu.classList.toggle("open");
-    });
-    document.addEventListener("click", () => moreMenu.classList.remove("open"));
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") moreMenu.classList.remove("open");
-    });
-  })();
 </script>
 </body>
 </html>
