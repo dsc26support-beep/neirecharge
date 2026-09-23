@@ -1,6 +1,13 @@
 /**
- * Kiribati recharge system — backend Web App (v10)
+ * Kiribati recharge system — backend Web App (v11)
  * ---------------------------------------------------
+ * Change from v10: dropped the "141...#" dial framing from both
+ * voucher emails -- just shows the bare code now. The tip email is
+ * now a full over-the-top HTML celebration (background GIF, VIP
+ * "breaking news" copy) with a plain-text fallback for clients that
+ * don't render HTML. TIP_CELEBRATION_GIF_URL below is a placeholder
+ * -- swap in a real GIF URL before this goes live.
+ *
  * Change from v9: amount checking now tolerates a small underpayment
  * (up to 5 cents under still counts as a match, but always forces
  * Pending Review, never auto-approves) and treats overpayment as a
@@ -420,28 +427,13 @@ function processApprovedRow(row) {
 
   const tipMatch = ocrNotes.match(/Tip:([0-9]+\.[0-9]{2})/);
   const tipAmount = tipMatch ? parseFloat(tipMatch[1]) : 0;
-  const cardNumber = "141" + voucher.code + "#";
-
-  const subject = tipAmount > 0
-    ? "🎉 Your top-up is confirmed — thanks for the tip!"
-    : "Your phone top-up code";
-
-  const body = tipAmount > 0
-    ? "Hi " + name + ",\n\n" +
-      "🎉 Your $" + topupAmount + " top-up is confirmed — and you sent a little extra!\n\n" +
-      "This is your Recharge Card Number:\n" +
-      cardNumber + "\n\n" +
-      "You tipped us $" + tipAmount.toFixed(2) + " -- thank you! Every tip goes straight into " +
-      "keeping this page running and improving for everyone.\n\n" +
-      "Ko rabwa\nNei Recharge.\n"
-    : "Hi " + name + ",\n\n" +
-      "Your $" + topupAmount + " top-up is confirmed.\n\n" +
-      "This is your Recharge Card Number:\n" +
-      cardNumber + "\n\n" +
-      "Ko rabwa\nNei Recharge.\n";
 
   try {
-    MailApp.sendEmail(String(email), subject, body, { name: EMAIL_SENDER_NAME });
+    if (tipAmount > 0) {
+      sendTipEmail(email, name, topupAmount, voucher.code, tipAmount);
+    } else {
+      sendStandardVoucherEmail(email, name, topupAmount, voucher.code);
+    }
     voucherSentCell.setValue(voucher.code + " (emailed)");
     return true;
   } catch (err) {
@@ -449,6 +441,56 @@ function processApprovedRow(row) {
     markVoucherUnused(voucher.rowIndex);
     return false;
   }
+}
+
+function sendStandardVoucherEmail(email, name, topupAmount, code) {
+  const body =
+    "Hi " + name + ",\n\n" +
+    "Your $" + topupAmount + " top-up is confirmed.\n\n" +
+    "This is your Recharge Card Number:\n" +
+    code + "\n\n" +
+    "Ko rabwa\nNei Recharge.\n";
+  MailApp.sendEmail(String(email), "Your phone top-up code", body, { name: EMAIL_SENDER_NAME });
+}
+
+// TODO: swap in a real animated balloons/confetti GIF URL before going live.
+const TIP_CELEBRATION_GIF_URL = "PASTE_A_BALLOON_CONFETTI_GIF_URL_HERE";
+
+function sendTipEmail(email, name, topupAmount, code, tipAmount) {
+  const subject = "🚨 BREAKING: " + name + " IS OFFICIALLY A TOP-UP VIP 🚨";
+
+  const plainBody =
+    "Hi " + name + ",\n\n" +
+    "🚨 BREAKING NEWS 🚨\n\n" +
+    "Your $" + topupAmount + " top-up is CONFIRMED -- and you tipped $" +
+    tipAmount.toFixed(2) + " on top. This is your Recharge Card Number:\n" +
+    code + "\n\n" +
+    "By order of the Ministry of Generosity, you have been promoted to " +
+    "OFFICIAL VIP TOP-UP LEGEND. Your tip goes straight into keeping this " +
+    "page alive and improving for everyone. We are, frankly, emotional.\n\n" +
+    "Ko rabwa\nNei Recharge.\n";
+
+  const htmlBody =
+    '<div style="font-family:sans-serif;text-align:center;padding:24px;' +
+    'background:url(\'' + TIP_CELEBRATION_GIF_URL + '\') center/cover;">' +
+    '<div style="background:rgba(255,255,255,0.92);border-radius:12px;padding:24px;max-width:420px;margin:0 auto;">' +
+    '<h1 style="margin:0 0 8px;font-size:1.4rem;">🚨 BREAKING NEWS 🚨</h1>' +
+    '<p style="font-size:1.1rem;font-weight:700;margin:0 0 16px;">' +
+    name + ' IS OFFICIALLY A TOP-UP VIP</p>' +
+    '<p>Your <b>$' + topupAmount + '</b> top-up is <b>CONFIRMED</b> -- and you tipped an extra ' +
+    '<b>$' + tipAmount.toFixed(2) + '</b> on top!</p>' +
+    '<p style="font-size:0.9rem;color:#6b7280;">This is your Recharge Card Number</p>' +
+    '<p style="font-size:1.3rem;font-weight:700;letter-spacing:2px;">' + code + '</p>' +
+    '<p>By order of the Ministry of Generosity, you have been promoted to ' +
+    '<b>OFFICIAL VIP TOP-UP LEGEND</b>. Your tip goes straight into keeping ' +
+    'this page alive and improving for everyone. We are, frankly, emotional. 🎉🎈</p>' +
+    '<p>Ko rabwa<br>Nei Recharge.</p>' +
+    '</div></div>';
+
+  MailApp.sendEmail(String(email), subject, plainBody, {
+    htmlBody: htmlBody,
+    name: EMAIL_SENDER_NAME,
+  });
 }
 
 function claimNextVoucher(topupAmount) {
