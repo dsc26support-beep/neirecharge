@@ -1,6 +1,16 @@
 /**
- * Kiribati recharge system — backend Web App (v14)
+ * Kiribati recharge system — backend Web App (v15)
  * ---------------------------------------------------
+ * Change from v14: both client-facing voucher emails now end with a
+ * shared footer -- pill-button links to Terms/Privacy/Refund
+ * Policy/Contact (HTML) or plain URLs (plain-text fallback), the
+ * support address (neirecharge@gmail.com), and a professional notice
+ * that replies to this email are not monitored and get archived
+ * unread. The standard voucher email is now HTML+plain-text (was
+ * plain-text only). SITE_BASE_URL assumes the site is still hosted
+ * at https://dsc26support-beep.github.io/topup/ -- update it there
+ * if that ever changes.
+ *
  * Change from v13: NEW OPTIONAL SHEET TAB -- "Used Vouchers" (same
  * columns as Vouchers: A code | B amount | C used-marker). Once a
  * claimed voucher's email has actually sent, its row moves out of
@@ -511,14 +521,73 @@ function archiveUsedVoucher(rowIndex) {
   vSheet.deleteRow(rowIndex);
 }
 
+// Site pages linked from every client email -- pill buttons in the HTML
+// version, plain URLs in the plain-text fallback for clients that don't
+// render HTML.
+const SITE_BASE_URL = "https://dsc26support-beep.github.io/topup/";
+const SUPPORT_EMAIL = "neirecharge@gmail.com";
+
+function buildEmailFooterHtml() {
+  const pages = [
+    ["Terms", "terms.html"], ["Privacy", "privacy.html"],
+    ["Refund Policy", "refund.html"], ["Contact / Support", "contact.html"],
+  ];
+  const pills = pages.map(function (p) {
+    return '<a href="' + SITE_BASE_URL + p[1] + '" style="display:inline-block;margin:4px 4px;' +
+      'padding:8px 16px;border-radius:999px;background:#7c3aed;color:#fff;' +
+      'font-size:0.85rem;font-weight:600;text-decoration:none;">' + p[0] + '</a>';
+  }).join("");
+
+  return (
+    '<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:center;font-family:sans-serif;">' +
+    '<p style="font-size:0.85rem;color:#6b7280;margin:0 0 10px;">Tap a button below for our Terms, Privacy Policy, Refund Policy, or Support.</p>' +
+    '<div>' + pills + '</div>' +
+    '<p style="font-size:0.85rem;color:#6b7280;margin:16px 0 0;">' +
+    'Questions or an issue with your top-up? Email our support team directly at ' +
+    '<a href="mailto:' + SUPPORT_EMAIL + '" style="color:#7c3aed;">' + SUPPORT_EMAIL + '</a>.</p>' +
+    '<p style="font-size:0.78rem;color:#9ca3af;margin:12px 0 0;">' +
+    'This is an automated message. Replies sent directly to this email address are not monitored ' +
+    'and will be archived without response. For assistance, please contact us using the address above.</p>' +
+    '</div>'
+  );
+}
+
+function buildEmailFooterPlainText() {
+  return (
+    "\n\n---\n" +
+    "Terms: " + SITE_BASE_URL + "terms.html\n" +
+    "Privacy: " + SITE_BASE_URL + "privacy.html\n" +
+    "Refund Policy: " + SITE_BASE_URL + "refund.html\n" +
+    "Contact / Support: " + SITE_BASE_URL + "contact.html\n\n" +
+    "Questions or an issue with your top-up? Email our support team directly at " + SUPPORT_EMAIL + ".\n\n" +
+    "This is an automated message. Replies sent directly to this email address are not monitored " +
+    "and will be archived without response. For assistance, please contact us using the address above.\n"
+  );
+}
+
 function sendStandardVoucherEmail(email, name, topupAmount, code) {
-  const body =
+  const plainBody =
     "Hi " + name + ",\n\n" +
     "Your $" + topupAmount + " top-up is confirmed.\n\n" +
     "This is your Recharge Card Number:\n" +
     code + "\n\n" +
-    "Ko rabwa\nNei Recharge.\n";
-  MailApp.sendEmail(String(email), "Your phone top-up code", body, { name: EMAIL_SENDER_NAME });
+    "Ko rabwa\nNei Recharge.\n" +
+    buildEmailFooterPlainText();
+
+  const htmlBody =
+    '<div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:24px;">' +
+    '<p>Hi ' + name + ',</p>' +
+    '<p>Your $' + topupAmount + ' top-up is confirmed.</p>' +
+    '<p style="font-size:0.9rem;color:#6b7280;margin-bottom:4px;">This is your Recharge Card Number</p>' +
+    '<p style="font-size:1.3rem;font-weight:700;letter-spacing:2px;">' + code + '</p>' +
+    '<p>Ko rabwa<br>Nei Recharge.</p>' +
+    buildEmailFooterHtml() +
+    '</div>';
+
+  MailApp.sendEmail(String(email), "Your phone top-up code", plainBody, {
+    htmlBody: htmlBody,
+    name: EMAIL_SENDER_NAME,
+  });
 }
 
 const TIP_CELEBRATION_GIF_URL = "https://media.giphy.com/media/TmT51OyQLFD7a/giphy.gif";
@@ -535,7 +604,8 @@ function sendTipEmail(email, name, topupAmount, code, tipAmount) {
     "By order of the Ministry of Generosity, you have been promoted to " +
     "OFFICIAL VIP TOP-UP LEGEND. Your tip goes straight into keeping this " +
     "page alive and improving for everyone. We are, frankly, emotional.\n\n" +
-    "Ko rabwa\nNei Recharge.\n";
+    "Ko rabwa\nNei Recharge.\n" +
+    buildEmailFooterPlainText();
 
   const htmlBody =
     '<div style="font-family:sans-serif;text-align:center;padding:24px;' +
@@ -552,6 +622,7 @@ function sendTipEmail(email, name, topupAmount, code, tipAmount) {
     '<b>OFFICIAL VIP TOP-UP LEGEND</b>. Your tip goes straight into keeping ' +
     'this page alive and improving for everyone. We are, frankly, emotional. 🎉🎈</p>' +
     '<p>Ko rabwa<br>Nei Recharge.</p>' +
+    buildEmailFooterHtml() +
     '</div></div>';
 
   MailApp.sendEmail(String(email), subject, plainBody, {
