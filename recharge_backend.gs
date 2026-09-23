@@ -1,6 +1,11 @@
 /**
- * Kiribati recharge system — backend Web App (v8)
+ * Kiribati recharge system — backend Web App (v9)
  * ---------------------------------------------------
+ * Change from v8: fixed "Invalid argument" from the v3 Files.create
+ * branch -- v3 doesn't accept an "ocr" parameter (only v2 does); it
+ * triggers OCR conversion by setting the target mimeType to a Google
+ * Doc instead, with just "ocrLanguage" as the optional arg.
+ *
  * Change from v7: ocrImage() now works whether the Drive advanced
  * service was added as v2 or v3 -- previously it hardcoded the v2
  * method name (Drive.Files.insert), which throws "is not a function"
@@ -314,13 +319,15 @@ function saveScreenshot(base64, mimeType, email) {
 function ocrImage(base64, mimeType) {
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, "ocr_temp");
   const name = "OCR_temp_" + new Date().getTime();
-  const optionalArgs = { ocr: true, ocrLanguage: "en" };
+  const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
 
-  // Drive API v3 renamed Files.insert -> Files.create and title -> name;
-  // support whichever version is enabled as the advanced service.
+  // Drive API v3 renamed Files.insert -> Files.create, title -> name, and
+  // dropped the "ocr" flag -- v3 triggers the OCR conversion by setting the
+  // target mimeType instead, and rejects an unrecognized "ocr" argument
+  // with "Invalid argument". v2 keeps the original ocr/ocrLanguage flags.
   const file = Drive.Files.create
-    ? Drive.Files.create({ name: name }, blob, optionalArgs)
-    : Drive.Files.insert({ title: name }, blob, optionalArgs);
+    ? Drive.Files.create({ name: name, mimeType: GOOGLE_DOC_MIME }, blob, { ocrLanguage: "en" })
+    : Drive.Files.insert({ title: name }, blob, { ocr: true, ocrLanguage: "en" });
 
   let text = "";
   try {
