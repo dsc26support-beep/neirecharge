@@ -92,6 +92,7 @@
     line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
   }
   .info-btn:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
+  .info-btn.hidden { display: none; }
   .info-modal-text { font-size: 0.9rem; line-height: 1.6; margin: 0; color: var(--text); }
   .screenshot-check {
     display: none; margin: 6px auto 0; width: 32px; height: 32px;
@@ -490,11 +491,13 @@
     if (file) {
       uploadBtnLabel.textContent = "Uploaded — tap to view";
       fileNameDisplay.classList.add("hidden");
+      screenshotInfoBtn.classList.add("hidden");
       screenshotCheck.classList.add("show");
     } else {
       uploadBtnLabel.textContent = "Upload Screenshot";
       fileNameDisplay.textContent = "No file selected";
       fileNameDisplay.classList.remove("hidden");
+      screenshotInfoBtn.classList.remove("hidden");
       screenshotCheck.classList.remove("show");
     }
   });
@@ -534,6 +537,7 @@
     uploadBtnLabel.textContent = "Upload Screenshot";
     fileNameDisplay.textContent = "No file selected";
     fileNameDisplay.classList.remove("hidden");
+    screenshotInfoBtn.classList.remove("hidden");
     screenshotCheck.classList.remove("show");
   }
 
