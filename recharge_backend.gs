@@ -1,6 +1,15 @@
 /**
- * Kiribati recharge system — backend Web App (v9)
+ * Kiribati recharge system — backend Web App (v10)
  * ---------------------------------------------------
+ * Change from v9: amount checking now tolerates a small underpayment
+ * (up to 5 cents under still counts as a match, but always forces
+ * Pending Review, never auto-approves) and treats overpayment as a
+ * tip -- eligible for auto-approve like an exact match, with a
+ * celebratory thank-you email showing the tip amount. Also renamed
+ * the email sender display name to "AM TOPUP (No-Reply)" and changed
+ * the voucher line from a dial instruction to "This is your Recharge
+ * Card Number".
+ *
  * Change from v8: fixed "Invalid argument" from the v3 Files.create
  * branch -- v3 doesn't accept an "ocr" parameter (only v2 does); it
  * triggers OCR conversion by setting the target mimeType to a Google
@@ -120,24 +129,29 @@ function doPost(e) {
     const ocrText = ocrImage(base64, mimeType);
 
     const refMatched = ocrTextContains(ocrText, reference);
-    const amountMatched = ocrTextContains(ocrText, costAmount.toFixed(2));
     const acctMatched = ocrTextContains(ocrText, ACCOUNT_NUMBER);
     const successMatched = ocrContainsSuccessWord(ocrText);
     const bankMatched = ocrContainsBankKeyword(ocrText);
     const recency = checkTransactionRecency(ocrText);
+
+    const amountCheck = checkAmountPaid(ocrText, costAmount);
+    const amountMatched = amountCheck.matched;
+    const tipAmount = amountCheck.tipAmount;
 
     const looksValid = refMatched && amountMatched && acctMatched &&
       successMatched && bankMatched && recency.ok;
 
     const props = PropertiesService.getScriptProperties();
     const autoMax = Number(props.getProperty("AUTO_APPROVE_MAX") || "0");
-    const eligibleForAuto = looksValid && costAmount <= autoMax;
+    const eligibleForAuto = looksValid && costAmount <= autoMax && !amountCheck.underTolerance;
 
     const notes = [
       "Ref:" + refMatched, "Cost:" + amountMatched, "Acct:" + acctMatched,
       "Success word:" + successMatched, "Bank name:" + bankMatched,
       "Recency:" + recency.ok + " (" + recency.note + ")",
       "Exif:" + isLikelyPhoto,
+      "Paid:" + (amountCheck.paidAmount !== null ? amountCheck.paidAmount.toFixed(2) : "n/a"),
+      "Tip:" + tipAmount.toFixed(2),
     ].join(" | ");
 
     const row = appendResponseRow({
@@ -266,6 +280,42 @@ function ocrTextContains(ocrText, needle) {
   return normalize(ocrText).indexOf(normalize(needle)) !== -1;
 }
 
+// Under-payment tolerance: this much under the required cost still counts
+// as a match, but always forces manual review (never auto-approves).
+const UNDERPAY_TOLERANCE = 0.05;
+
+function extractPaidAmountFromText(ocrText) {
+  const match = ocrText.match(/(?:AUD|NZD|USD|\$)\s?([0-9]+\.[0-9]{2})/i);
+  if (!match) return null;
+  const val = parseFloat(match[1]);
+  return isNaN(val) ? null : val;
+}
+
+// Checks the amount actually paid against the required cost. Exact match or
+// overpayment (tip) both count as matched; a small underpayment still
+// counts as matched but is flagged so it can never auto-approve. Falls back
+// to an exact-string search when no dollar figure could be parsed from the
+// OCR'd text at all.
+function checkAmountPaid(ocrText, costAmount) {
+  const paidAmount = extractPaidAmountFromText(ocrText);
+
+  if (paidAmount === null) {
+    return {
+      matched: ocrTextContains(ocrText, costAmount.toFixed(2)),
+      paidAmount: null, tipAmount: 0, underTolerance: false,
+    };
+  }
+
+  const diff = Math.round((paidAmount - costAmount) * 100) / 100;
+  if (diff >= 0) {
+    return { matched: true, paidAmount: paidAmount, tipAmount: diff, underTolerance: false };
+  }
+  if (diff >= -UNDERPAY_TOLERANCE) {
+    return { matched: true, paidAmount: paidAmount, tipAmount: 0, underTolerance: true };
+  }
+  return { matched: false, paidAmount: paidAmount, tipAmount: 0, underTolerance: false };
+}
+
 function ocrContainsSuccessWord(ocrText) {
   return /(successful|completed|confirmed|approved|receipt|success|posted)/i.test(ocrText);
 }
@@ -350,11 +400,14 @@ function appendResponseRow(data) {
 
 // ---- Voucher assignment + email send ----
 
+const EMAIL_SENDER_NAME = "AM TOPUP (No-Reply)";
+
 function processApprovedRow(row) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RESPONSES_SHEET_NAME);
   const name = sheet.getRange(row, COL.NAME).getValue();
   const email = sheet.getRange(row, COL.EMAIL).getValue();
   const topupAmount = sheet.getRange(row, COL.TOPUP_AMOUNT).getValue();
+  const ocrNotes = String(sheet.getRange(row, COL.OCR_NOTES).getValue() || "");
   const voucherSentCell = sheet.getRange(row, COL.VOUCHER_SENT);
 
   if (voucherSentCell.getValue()) return true;
@@ -365,16 +418,30 @@ function processApprovedRow(row) {
     return false;
   }
 
-  const subject = "Your phone top-up code";
-  const body =
-    "Hi " + name + ",\n\n" +
-    "Your $" + topupAmount + " top-up is confirmed.\n\n" +
-    "On the phone you're topping up, dial:\n" +
-    "141" + voucher.code + "#\n\n" +
-    "This applies the credit to your balance.\n";
+  const tipMatch = ocrNotes.match(/Tip:([0-9]+\.[0-9]{2})/);
+  const tipAmount = tipMatch ? parseFloat(tipMatch[1]) : 0;
+  const cardNumber = "141" + voucher.code + "#";
+
+  const subject = tipAmount > 0
+    ? "🎉 Your top-up is confirmed — thanks for the tip!"
+    : "Your phone top-up code";
+
+  const body = tipAmount > 0
+    ? "Hi " + name + ",\n\n" +
+      "🎉 Your $" + topupAmount + " top-up is confirmed — and you sent a little extra!\n\n" +
+      "This is your Recharge Card Number:\n" +
+      cardNumber + "\n\n" +
+      "You tipped us $" + tipAmount.toFixed(2) + " -- thank you! Every tip goes straight into " +
+      "keeping this page running and improving for everyone.\n\n" +
+      "Ko rabwa\nNei Recharge.\n"
+    : "Hi " + name + ",\n\n" +
+      "Your $" + topupAmount + " top-up is confirmed.\n\n" +
+      "This is your Recharge Card Number:\n" +
+      cardNumber + "\n\n" +
+      "Ko rabwa\nNei Recharge.\n";
 
   try {
-    MailApp.sendEmail(String(email), subject, body);
+    MailApp.sendEmail(String(email), subject, body, { name: EMAIL_SENDER_NAME });
     voucherSentCell.setValue(voucher.code + " (emailed)");
     return true;
   } catch (err) {
