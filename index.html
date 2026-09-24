@@ -513,10 +513,36 @@
     reader.readAsDataURL(file);
   }
 
+  function validateDetailsBeforeUpload() {
+    statusEl.textContent = "";
+    statusEl.className = "";
+    if (!nameInput.value.trim()) {
+      statusEl.textContent = "Please enter your full name first.";
+      statusEl.className = "error";
+      nameInput.focus();
+      return false;
+    }
+    if (!isValidEmail(emailInput.value.trim())) {
+      statusEl.textContent = "Please enter a valid email address first.";
+      statusEl.className = "error";
+      emailInput.focus();
+      return false;
+    }
+    const p = PRICING.find((x) => String(x.topup) === amountSelect.value);
+    if (!p) {
+      statusEl.textContent = "Please select a top-up amount first.";
+      statusEl.className = "error";
+      amountSelect.focus();
+      return false;
+    }
+    return true;
+  }
+
   uploadBtnLabel.addEventListener("click", () => {
     if (screenshotInput.files[0]) {
       showScreenshotPreview();
     } else {
+      if (!validateDetailsBeforeUpload()) return;
       screenshotInput.click();
     }
   });
