@@ -80,6 +80,7 @@
   }
   .cost-display.show { display: block; }
   .cost-display b { color: var(--accent); }
+  .spacer { height: 14px; }
 
   .file-input-hidden {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -188,13 +189,13 @@
   .install-banner {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
     display: none; flex-direction: row; align-items: center; gap: 10px;
-    background: var(--accent); border-radius: 999px;
-    padding: 10px 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    background: #fff; border: 2px solid var(--accent); border-radius: 999px;
+    padding: 10px 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);
     z-index: 60; max-width: calc(100% - 32px); white-space: nowrap;
   }
   .install-banner.show { display: flex; }
   .install-banner #install-btn {
-    background: none; border: none; color: #fff; font-weight: 700;
+    background: none; border: none; color: var(--accent); font-weight: 700;
     font-size: 0.9rem; cursor: pointer; padding: 0; white-space: nowrap;
     display: flex; flex-direction: row; align-items: center; gap: 6px;
   }
@@ -239,6 +240,9 @@
     <div class="cost-display" id="cost-display">
       You will pay <b id="cost-value">—</b>.
     </div>
+
+    <div class="spacer"></div>
+    <div class="spacer"></div>
 
     <label for="screenshot" class="label-with-info">
       Payment Proof
