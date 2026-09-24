@@ -156,6 +156,7 @@
     width: 100%; position: relative; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   }
   .modal-box h2 { font-size: 1.1rem; margin: 0 0 14px; }
+  .modal-box p { font-size: 0.92rem; line-height: 1.6; margin: 0 0 18px; }
   .modal-box ol { padding-left: 20px; margin: 0; }
   .modal-box li { font-size: 0.88rem; line-height: 1.6; margin-bottom: 8px; }
   .modal-close {
@@ -264,6 +265,14 @@
 
 <div class="install-banner" id="install-banner">
   <button type="button" id="install-btn"><img src="icons/icon-192.png" alt="" class="install-btn-icon">Try our App</button>
+</div>
+
+<div class="modal-overlay" id="hour-reminder-overlay">
+  <div class="modal-box confirm-box">
+    <h2>Before you start</h2>
+    <p>Your bank transfer must be submitted within <b>1 hour</b> of making it. Screenshots of older transactions will be rejected — so don't pay until you're ready to upload proof right away.</p>
+    <button type="button" class="ok-btn" id="hour-reminder-ok">Got it</button>
+  </div>
 </div>
 
 <div class="modal-overlay" id="screenshot-info-overlay">
@@ -448,12 +457,33 @@
     if (e.target === screenshotInfoOverlay) screenshotInfoOverlay.classList.remove("open");
   });
 
+  const HOUR_REMINDER_SEEN_KEY = "recharge_hour_reminder_seen";
+  const hourReminderOverlay = document.getElementById("hour-reminder-overlay");
+  const hourReminderOk = document.getElementById("hour-reminder-ok");
+
+  function dismissHourReminder() {
+    hourReminderOverlay.classList.remove("open");
+    try { localStorage.setItem(HOUR_REMINDER_SEEN_KEY, "1"); } catch (e) {}
+  }
+  hourReminderOk.addEventListener("click", dismissHourReminder);
+  hourReminderOverlay.addEventListener("click", (e) => {
+    if (e.target === hourReminderOverlay) dismissHourReminder();
+  });
+  try {
+    if (!localStorage.getItem(HOUR_REMINDER_SEEN_KEY)) {
+      hourReminderOverlay.classList.add("open");
+    }
+  } catch (e) {
+    hourReminderOverlay.classList.add("open");
+  }
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       menuDropdown.classList.remove("open");
       screenshotInfoOverlay.classList.remove("open");
       beforePayOverlay.classList.remove("open");
       document.getElementById("screenshot-preview-overlay").classList.remove("open");
+      if (hourReminderOverlay.classList.contains("open")) dismissHourReminder();
     }
   });
 
