@@ -37,14 +37,13 @@
   .help-btn:hover { background: var(--bg); color: var(--accent); border-color: var(--accent); }
   h1 { font-size: 1.4rem; margin: 0 0 4px; text-align: center; }
   .steps {
-    display: flex; align-items: center; justify-content: center; flex-wrap: nowrap;
-    gap: 2px; margin: 0 0 20px; white-space: nowrap; overflow-x: auto;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap;
+    width: 100%; margin: 0 0 20px; white-space: nowrap; overflow-x: auto;
     -ms-overflow-style: none; scrollbar-width: none;
   }
   .steps::-webkit-scrollbar { display: none; }
-  .steps .step { display: inline-flex; align-items: center; gap: 2px; font-size: 0.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
-  .steps .step-emoji { font-size: 0.64rem; }
-  .steps .arrow { color: var(--accent); font-weight: 700; font-size: 0.55rem; padding: 0; }
+  .steps .step { font-size: 0.68rem; font-weight: 700; color: var(--text); }
+  .steps .arrow { color: var(--accent); font-weight: 700; font-size: 0.7rem; }
   .copy-btn {
     display: block; margin: 6px auto 0; padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;
     border: 1px solid var(--border); background: #fff; cursor: pointer;
@@ -211,13 +210,13 @@
   <button type="button" class="help-btn" id="help-btn" aria-label="How to use this service">?</button>
   <h1>Phone Top-Up</h1>
   <div class="steps">
-    <span class="step"><span class="step-emoji">📝</span>Fill Details</span>
+    <span class="step">Fill Details</span>
     <span class="arrow">&#8594;</span>
-    <span class="step"><span class="step-emoji">📲</span>Screenshot IB</span>
+    <span class="step">Screenshot IB</span>
     <span class="arrow">&#8594;</span>
-    <span class="step"><span class="step-emoji">✅</span>Submit</span>
+    <span class="step">Submit</span>
     <span class="arrow">&#8594;</span>
-    <span class="step"><span class="step-emoji">📧</span>Check Email</span>
+    <span class="step">Check Email</span>
   </div>
 
   <form id="recharge-form">
