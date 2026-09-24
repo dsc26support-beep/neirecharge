@@ -1,6 +1,15 @@
 /**
- * Kiribati recharge system — backend Web App (v20)
+ * Kiribati recharge system — backend Web App (v21)
  * ---------------------------------------------------
+ * Change from v20: bank account number changed from 786149 to 906149
+ * -- updates ACCOUNT_NUMBER, which the OCR check matches against the
+ * screenshot text. Also updated on the frontend (main pay box,
+ * "before you pay" popup, and how-to-use instructions). IMPORTANT:
+ * any in-flight screenshots taken before this redeploy will show the
+ * OLD account number and fail the Acct check under the new rule --
+ * expect a short window of Rejected/Pending rows around the cutover;
+ * approve those manually if the payment is genuine.
+ *
  * Change from v19: NEW -- a free, rule-based daily triage digest for
  * Rejected submissions (sendRejectedTriageDigest()). It buckets each
  * recently-Rejected row by how many individual OCR checks failed --
@@ -162,7 +171,7 @@ const RESPONSES_SHEET_NAME = "Responses";
 const VOUCHERS_SHEET_NAME = "Vouchers";
 const ARCHIVE_SHEET_NAME = "Archive";
 const USED_VOUCHERS_SHEET_NAME = "Used Vouchers";
-const ACCOUNT_NUMBER = "786149";
+const ACCOUNT_NUMBER = "906149";
 
 const COL = {
   TIMESTAMP: 1, REFERENCE: 2, NAME: 3, EMAIL: 4,

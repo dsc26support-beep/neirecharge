@@ -164,13 +164,25 @@
   }
   .modal-close:hover { background: var(--border); }
 
-  .confirm-box p { font-size: 0.92rem; line-height: 1.6; margin: 0 0 10px; }
-  .confirm-box .big { font-size: 1.15rem; font-weight: 700; text-align: center; margin: 14px 0; }
-  .confirm-actions { display: flex; gap: 10px; margin-top: 18px; }
-  .confirm-actions button { flex: 1; padding: 10px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; }
-  .confirm-actions .go-back { background: #fff; border: 1px solid var(--border); color: var(--text); }
-  .confirm-actions .ok-btn { background: var(--accent); border: none; color: #fff; font-weight: 600; }
-  .confirm-actions .ok-btn:hover { background: var(--accent-hover); }
+  .detail-row {
+    display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 10px;
+    padding: 10px 8px; border-bottom: 1px solid var(--border);
+  }
+  .detail-row:last-of-type { border-bottom: none; margin-bottom: 18px; }
+  .detail-main { text-align: center; overflow: hidden; }
+  .detail-label {
+    font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .detail-value {
+    font-family: monospace; font-weight: 700; font-size: 1rem; letter-spacing: 0.5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .detail-row .copy-btn { margin: 0; min-width: 60px; text-align: center; }
+  .ok-btn {
+    display: block; width: 100%; padding: 12px; border-radius: 8px; font-size: 0.95rem;
+    cursor: pointer; background: var(--accent); border: none; color: #fff; font-weight: 600;
+  }
+  .ok-btn:hover { background: var(--accent-hover); }
 
   .install-banner {
     position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
@@ -202,7 +214,7 @@
   <p class="sub">Fill in your details below, then transfer payment and submit your proof.</p>
 
   <div class="pay-box">
-    <div class="row"><span>Pay to Account Number</span><span>786149</span></div>
+    <div class="row"><span>Pay to Account Number</span><span>906149</span></div>
     <div class="row"><span>Your Reference to Recipient</span><span class="ref" id="ref-code">—</span></div>
     <button type="button" class="copy-btn" id="copy-btn">Copy Reference to Recipient</button>
     <div class="instr">
@@ -260,7 +272,7 @@
     <ol>
       <li>Fill in your name, email, and amount.</li>
       <li>Note the payment reference shown above the form.</li>
-      <li>Transfer the <b>pay</b> amount shown (not the top-up amount) via Internet Banking Kiribati to Account 786149, entering your reference in the Reference to Recipient field.</li>
+      <li>Transfer the <b>pay</b> amount shown (not the top-up amount) via Internet Banking Kiribati to Account 906149, entering your reference in the Reference to Recipient field.</li>
       <li>Screenshot the completed transfer and upload it below.</li>
       <li>Submit — your recharge code will be emailed once your payment is confirmed.</li>
     </ol>
@@ -288,20 +300,38 @@
 
 <div class="modal-overlay" id="before-pay-overlay">
   <div class="modal-box confirm-box">
-    <h2>Before you pay</h2>
-    <p>Go make this transfer now via Internet Banking Kiribati, then come back to upload your screenshot:</p>
-    <div class="big">
-      Pay <span id="before-pay-cost">—</span>
+    <h2>Copy/Paste to Bank App</h2>
+
+    <div class="detail-row">
+      <div class="detail-main">
+        <div class="detail-label">Account Name</div>
+        <div class="detail-value">Nei Recharge</div>
+      </div>
+      <button type="button" class="copy-btn yellow inline" id="before-pay-copy-name-btn">Copy</button>
     </div>
-    <p style="text-align: center; margin-bottom: 6px;">Reference to Recipient:</p>
-    <div class="ref-row">
-      <b id="before-pay-ref">—</b>
+    <div class="detail-row">
+      <div class="detail-main">
+        <div class="detail-label">Account Number</div>
+        <div class="detail-value">906149</div>
+      </div>
+      <button type="button" class="copy-btn yellow inline" id="before-pay-copy-acct-btn">Copy</button>
+    </div>
+    <div class="detail-row">
+      <div class="detail-main">
+        <div class="detail-label">Reference to Recipient</div>
+        <div class="detail-value" id="before-pay-ref">—</div>
+      </div>
       <button type="button" class="copy-btn yellow inline" id="before-pay-copy-btn">Copy</button>
     </div>
-    <div class="confirm-actions">
-      <button type="button" class="go-back" id="before-pay-change">Change amount</button>
-      <button type="button" class="ok-btn" id="before-pay-ok">I'll PAY and SCREENSHOT it !</button>
+    <div class="detail-row">
+      <div class="detail-main">
+        <div class="detail-label">Pay</div>
+        <div class="detail-value" id="before-pay-cost">—</div>
+      </div>
+      <button type="button" class="copy-btn yellow inline" id="before-pay-copy-cost-btn">Copy</button>
     </div>
+
+    <button type="button" class="ok-btn" id="before-pay-ok">UPLOAD PAYMENT SCREENSHOT</button>
   </div>
 </div>
 
@@ -342,8 +372,8 @@
   const beforePayOverlay = document.getElementById("before-pay-overlay");
   const beforePayCost = document.getElementById("before-pay-cost");
   const beforePayRef = document.getElementById("before-pay-ref");
-  const beforePayChange = document.getElementById("before-pay-change");
   const beforePayOk = document.getElementById("before-pay-ok");
+  let currentCost = null;
   const nameInput = document.getElementById("name");
   const emailInput = document.getElementById("email");
 
@@ -370,6 +400,7 @@
     if (!p || beforePayShownForSelection) return;
     if (!nameInput.value.trim() || !isValidEmail(emailInput.value.trim())) return;
 
+    currentCost = p.cost;
     beforePayCost.textContent = "$" + p.cost.toFixed(2);
     beforePayRef.textContent = reference;
     beforePayOverlay.classList.add("open");
@@ -392,13 +423,10 @@
   nameInput.addEventListener("blur", maybeShowBeforePay);
   emailInput.addEventListener("blur", maybeShowBeforePay);
 
-  beforePayChange.addEventListener("click", () => {
+  beforePayOk.addEventListener("click", () => {
     beforePayOverlay.classList.remove("open");
-    amountSelect.value = "";
-    costDisplay.classList.remove("show");
-    amountSelect.focus();
+    screenshotInput.click();
   });
-  beforePayOk.addEventListener("click", () => beforePayOverlay.classList.remove("open"));
   beforePayOverlay.addEventListener("click", (e) => {
     if (e.target === beforePayOverlay) beforePayOverlay.classList.remove("open");
   });
@@ -444,18 +472,21 @@
     }
   });
 
-  function wireCopyButton(btnId) {
+  function wireCopyButton(btnId, getText) {
     const btn = document.getElementById(btnId);
     btn.addEventListener("click", () => {
-      navigator.clipboard.writeText(reference).then(() => {
+      navigator.clipboard.writeText(getText()).then(() => {
         const original = btn.textContent;
         btn.textContent = "Copied!";
         setTimeout(() => (btn.textContent = original), 1500);
       });
     });
   }
-  wireCopyButton("copy-btn");
-  wireCopyButton("before-pay-copy-btn");
+  wireCopyButton("copy-btn", () => reference);
+  wireCopyButton("before-pay-copy-btn", () => reference);
+  wireCopyButton("before-pay-copy-name-btn", () => "Nei Recharge");
+  wireCopyButton("before-pay-copy-acct-btn", () => "906149");
+  wireCopyButton("before-pay-copy-cost-btn", () => (currentCost !== null ? currentCost.toFixed(2) : ""));
 
   const screenshotInput = document.getElementById("screenshot");
   const fileNameDisplay = document.getElementById("file-name-display");
