@@ -36,7 +36,15 @@
   }
   .help-btn:hover { background: var(--bg); color: var(--accent); border-color: var(--accent); }
   h1 { font-size: 1.4rem; margin: 0 0 4px; text-align: center; }
-  p.sub { color: var(--muted); margin: 0 0 20px; font-size: 0.9rem; text-align: center; }
+  .steps {
+    display: flex; align-items: center; justify-content: center; flex-wrap: nowrap;
+    gap: 2px; margin: 0 0 20px; white-space: nowrap; overflow-x: auto;
+    -ms-overflow-style: none; scrollbar-width: none;
+  }
+  .steps::-webkit-scrollbar { display: none; }
+  .steps .step { display: inline-flex; align-items: center; gap: 2px; font-size: 0.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+  .steps .step-emoji { font-size: 0.64rem; }
+  .steps .arrow { color: var(--accent); font-weight: 700; font-size: 0.55rem; padding: 0; }
   .copy-btn {
     display: block; margin: 6px auto 0; padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;
     border: 1px solid var(--border); background: #fff; cursor: pointer;
@@ -199,7 +207,15 @@
 <div class="card">
   <button type="button" class="help-btn" id="help-btn" aria-label="How to use this service">?</button>
   <h1>Phone Top-Up</h1>
-  <p class="sub">Fill in your details below, then transfer payment and submit your proof.</p>
+  <div class="steps">
+    <span class="step"><span class="step-emoji">📝</span>Fill Details</span>
+    <span class="arrow">&#8594;</span>
+    <span class="step"><span class="step-emoji">📲</span>Screenshot IB</span>
+    <span class="arrow">&#8594;</span>
+    <span class="step"><span class="step-emoji">✅</span>Submit</span>
+    <span class="arrow">&#8594;</span>
+    <span class="step"><span class="step-emoji">📧</span>Check Email</span>
+  </div>
 
   <form id="recharge-form">
     <label for="name">Full name</label>
