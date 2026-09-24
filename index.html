@@ -26,15 +26,26 @@
     border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     position: relative;
   }
-  .help-btn {
+  .menu-btn {
     position: absolute; top: 16px; right: 16px;
     width: 28px; height: 28px; border-radius: 50%;
-    border: 1px solid var(--border); background: #fff; color: var(--muted);
-    font-size: 0.85rem; font-weight: 700; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    line-height: 1; padding: 0;
+    border: 1px solid var(--border); background: #fff;
+    cursor: pointer; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; padding: 0;
   }
-  .help-btn:hover { background: var(--bg); color: var(--accent); border-color: var(--accent); }
+  .menu-btn:hover { background: var(--bg); border-color: var(--accent); }
+  .menu-btn span { display: block; width: 14px; height: 2px; background: var(--muted); border-radius: 1px; }
+  .menu-btn:hover span { background: var(--accent); }
+  .menu-dropdown {
+    display: none; position: absolute; top: 50px; right: 16px;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15); padding: 6px 0; min-width: 140px; z-index: 70;
+  }
+  .menu-dropdown.open { display: block; }
+  .menu-dropdown a {
+    display: block; padding: 8px 16px; font-size: 0.88rem; color: var(--text); text-decoration: none;
+  }
+  .menu-dropdown a:hover { background: var(--bg); color: var(--accent); }
   h1 { font-size: 1.4rem; margin: 0 0 4px; text-align: center; }
   .steps {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap;
@@ -200,7 +211,15 @@
 </head>
 <body>
 <div class="card">
-  <button type="button" class="help-btn" id="help-btn" aria-label="How to use this service">?</button>
+  <button type="button" class="menu-btn" id="menu-btn" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="menu-dropdown" id="menu-dropdown">
+    <a href="terms.html">Terms</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="refund.html">Refund</a>
+    <a href="contact.html">Support</a>
+  </div>
   <h1>Phone Top-Up</h1>
   <div class="steps">
     <span class="step">Fill Details</span>
@@ -250,20 +269,6 @@
 
 <div class="install-banner" id="install-banner">
   <button type="button" id="install-btn"><img src="icons/icon-192.png" alt="" class="install-btn-icon">Try our App</button>
-</div>
-
-<div class="modal-overlay" id="help-overlay">
-  <div class="modal-box">
-    <button type="button" class="modal-close" id="modal-close" aria-label="Close">✕</button>
-    <h2>How to use this service</h2>
-    <ol>
-      <li>Fill in your name, email, and amount.</li>
-      <li>Note the payment reference shown above the form.</li>
-      <li>Transfer the <b>pay</b> amount shown (not the top-up amount) via Internet Banking Kiribati to Account 906149, entering your reference in the Reference to Recipient field.</li>
-      <li>Screenshot the completed transfer and upload it below.</li>
-      <li>Submit — your recharge code will be emailed once your payment is confirmed.</li>
-    </ol>
-  </div>
 </div>
 
 <div class="modal-overlay" id="screenshot-info-overlay">
@@ -429,15 +434,14 @@
 
   const reference = generateReference();
 
-  const helpBtn = document.getElementById("help-btn");
-  const helpOverlay = document.getElementById("help-overlay");
-  const modalClose = document.getElementById("modal-close");
+  const menuBtn = document.getElementById("menu-btn");
+  const menuDropdown = document.getElementById("menu-dropdown");
 
-  helpBtn.addEventListener("click", () => helpOverlay.classList.add("open"));
-  modalClose.addEventListener("click", () => helpOverlay.classList.remove("open"));
-  helpOverlay.addEventListener("click", (e) => {
-    if (e.target === helpOverlay) helpOverlay.classList.remove("open");
+  menuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menuDropdown.classList.toggle("open");
   });
+  document.addEventListener("click", () => menuDropdown.classList.remove("open"));
 
   const screenshotInfoBtn = document.getElementById("screenshot-info-btn");
   const screenshotInfoOverlay = document.getElementById("screenshot-info-overlay");
@@ -451,7 +455,7 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      helpOverlay.classList.remove("open");
+      menuDropdown.classList.remove("open");
       screenshotInfoOverlay.classList.remove("open");
       beforePayOverlay.classList.remove("open");
       document.getElementById("screenshot-preview-overlay").classList.remove("open");
