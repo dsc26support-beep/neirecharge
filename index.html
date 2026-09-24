@@ -13,7 +13,7 @@
 <style>
   :root {
     --bg: #f6f7f9; --card: #ffffff; --text: #1a1a1a; --muted: #6b7280;
-    --accent: #7c3aed; --accent-hover: #6d28d9; --border: #e5e7eb;
+    --accent: #7c3aed; --accent-hover: #6d28d9; --border: #c4b5fd; --placeholder: #c9bd8f;
     --error: #dc2626; --success: #16a34a; --warn-bg: #fef9c3; --warn-border: #eab308;
   }
   * { box-sizing: border-box; }
@@ -59,7 +59,10 @@
     width: 100%; padding: 10px 12px; border: 1px solid var(--border);
     border-radius: 8px; font-size: 1rem; background: #fff; color: var(--text);
   }
-  #amount:invalid, #amount option[value=""] { color: #9ca3af; }
+  input[type="text"]::placeholder, input[type="email"]::placeholder {
+    font-size: 0.85rem; color: var(--placeholder);
+  }
+  #amount:invalid, #amount option[value=""] { color: var(--placeholder); }
   #amount option { color: var(--text); }
   .hint { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
   .cost-display {
