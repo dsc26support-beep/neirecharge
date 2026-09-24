@@ -26,18 +26,16 @@
     border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     position: relative;
   }
+  .top-bar { position: relative; display: flex; justify-content: flex-end; margin-bottom: 8px; }
   .menu-btn {
-    position: absolute; top: 16px; right: 16px;
-    width: 28px; height: 28px; border-radius: 50%;
-    border: 1px solid var(--border); background: #fff;
+    border: none; background: none;
     cursor: pointer; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 3px; padding: 0;
+    justify-content: center; gap: 4px; padding: 6px;
   }
-  .menu-btn:hover { background: var(--bg); border-color: var(--accent); }
-  .menu-btn span { display: block; width: 14px; height: 2px; background: var(--muted); border-radius: 1px; }
+  .menu-btn span { display: block; width: 18px; height: 2px; background: var(--muted); border-radius: 1px; }
   .menu-btn:hover span { background: var(--accent); }
   .menu-dropdown {
-    display: none; position: absolute; top: 50px; right: 16px;
+    display: none; position: absolute; top: 100%; right: 0;
     background: #fff; border: 1px solid var(--border); border-radius: 10px;
     box-shadow: 0 4px 14px rgba(0,0,0,0.15); padding: 6px 0; min-width: 140px; z-index: 70;
   }
@@ -211,14 +209,16 @@
 </head>
 <body>
 <div class="card">
-  <button type="button" class="menu-btn" id="menu-btn" aria-label="Menu">
-    <span></span><span></span><span></span>
-  </button>
-  <div class="menu-dropdown" id="menu-dropdown">
-    <a href="terms.html">Terms</a>
-    <a href="privacy.html">Privacy</a>
-    <a href="refund.html">Refund</a>
-    <a href="contact.html">Support</a>
+  <div class="top-bar">
+    <button type="button" class="menu-btn" id="menu-btn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="menu-dropdown" id="menu-dropdown">
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="refund.html">Refund</a>
+      <a href="contact.html">Support</a>
+    </div>
   </div>
   <h1>Phone Top-Up</h1>
   <div class="steps">
