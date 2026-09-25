@@ -187,6 +187,10 @@
     cursor: pointer; background: var(--accent); border: none; color: #fff; font-weight: 600;
   }
   .ok-btn:hover { background: var(--accent-hover); }
+  .popup-error {
+    display: none; margin-top: 10px; font-size: 0.85rem; text-align: center;
+    color: var(--error); font-weight: 600;
+  }
 
   .install-banner {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
@@ -330,6 +334,7 @@
     </div>
 
     <button type="button" class="ok-btn" id="before-pay-ok">UPLOAD PAYMENT SCREENSHOT</button>
+    <div class="popup-error" id="before-pay-error"></div>
   </div>
 </div>
 
@@ -432,7 +437,15 @@
   nameInput.addEventListener("blur", maybeShowBeforePay);
   emailInput.addEventListener("blur", maybeShowBeforePay);
 
+  let referenceCopied = false;
+  const beforePayError = document.getElementById("before-pay-error");
+
   beforePayOk.addEventListener("click", () => {
+    if (!referenceCopied) {
+      beforePayError.textContent = "Please copy the Reference to Recipient first.";
+      beforePayError.style.display = "block";
+      return;
+    }
     beforePayOverlay.classList.remove("open");
     screenshotInput.click();
   });
@@ -511,6 +524,10 @@
     });
   }
   wireCopyButton("before-pay-copy-btn", () => reference);
+  document.getElementById("before-pay-copy-btn").addEventListener("click", () => {
+    referenceCopied = true;
+    beforePayError.style.display = "none";
+  });
   wireCopyButton("before-pay-copy-name-btn", () => "Nei Recharge");
   wireCopyButton("before-pay-copy-acct-btn", () => "906149");
   wireCopyButton("before-pay-copy-cost-btn", () => (currentCost !== null ? currentCost.toFixed(2) : ""));
@@ -571,6 +588,11 @@
       statusEl.textContent = "Please select a top-up amount first.";
       statusEl.className = "error";
       amountSelect.focus();
+      return false;
+    }
+    if (!referenceCopied) {
+      statusEl.textContent = "Please copy the Reference to Recipient first.";
+      statusEl.className = "error";
       return false;
     }
     return true;
