@@ -373,7 +373,13 @@
   populateAmountOptions(null);
   fetch(BACKEND_URL, { method: "GET" })
     .then((r) => r.json())
-    .then((data) => populateAmountOptions(data.availableAmounts || null))
+    .then((data) => {
+      populateAmountOptions(data.availableAmounts || null);
+      // Prefer the server-issued reference (lets the backend tell a
+      // genuine reference from a fabricated one) -- falls back to the
+      // locally-generated one below if this request is slow/fails.
+      if (data.reference) reference = data.reference;
+    })
     .catch(() => populateAmountOptions(null));
 
   const beforePayOverlay = document.getElementById("before-pay-overlay");
@@ -462,7 +468,11 @@
     if (e.target === beforePayOverlay) beforePayOverlay.classList.remove("open");
   });
 
-  // Unambiguous charset: no 0/O, no 1/I.
+  // Unambiguous charset: no 0/O, no 1/I. Fallback only -- normally
+  // overwritten by the server-issued reference from the GET request above
+  // once it resolves, so the backend can tell a genuine reference from a
+  // fabricated one. Kept so the form still works if that request is
+  // slow/fails (submission just won't auto-approve in that case).
   const REF_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
   function generateReference() {
@@ -471,7 +481,7 @@
     return out;
   }
 
-  const reference = generateReference();
+  let reference = generateReference();
 
   const menuBtn = document.getElementById("menu-btn");
   const menuDropdown = document.getElementById("menu-dropdown");

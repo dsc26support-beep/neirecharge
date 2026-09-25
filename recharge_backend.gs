@@ -1,6 +1,26 @@
 /**
- * Kiribati recharge system — backend Web App (v21)
+ * Kiribati recharge system — backend Web App (v22)
  * ---------------------------------------------------
+ * Change from v21: closes a real fraud gap -- the payment reference
+ * code used to be generated entirely client-side (in index.html), so
+ * the backend had no way to tell a genuine reference from one a
+ * fraudulent customer simply invented. The reference is now generated
+ * SERVER-SIDE, in doGet() (issueReference()), and logged to a new
+ * "Reference" sheet tab. doPost() checks isReferenceIssuedByUs() --
+ * if the submitted reference doesn't match anything this server ever
+ * issued, the row is forced to Pending Review (never silently
+ * Approved, and never auto-Rejected either, in case the customer's
+ * browser just failed to fetch a server-issued reference and fell
+ * back to a local one) and an immediate email alert is sent to
+ * ADMIN_EMAIL (alertSuspectedFraud()), separate from the daily
+ * digests. The frontend still falls back to generating one locally if
+ * the GET request fails, so the form never breaks -- it just won't
+ * auto-approve in that fallback case.
+ * SETUP -- NEW REQUIRED SHEET TAB: "Reference" (2 columns: Reference |
+ * Issued At). Until this tab exists, isReferenceIssuedByUs() always
+ * returns true (not enforced), so it's safe to redeploy before adding
+ * the tab -- the fraud check just won't do anything yet.
+ *
  * Change from v20: bank account number changed from 786149 to 906149
  * -- updates ACCOUNT_NUMBER, which the OCR check matches against the
  * screenshot text. Also updated on the frontend (main pay box,
@@ -171,6 +191,7 @@ const RESPONSES_SHEET_NAME = "Responses";
 const VOUCHERS_SHEET_NAME = "Vouchers";
 const ARCHIVE_SHEET_NAME = "Archive";
 const USED_VOUCHERS_SHEET_NAME = "Used Vouchers";
+const REFERENCE_SHEET_NAME = "Reference";
 const ACCOUNT_NUMBER = "906149";
 
 const COL = {
@@ -191,7 +212,42 @@ function doGet(e) {
     if (amt && !used) counts[amt] = (counts[amt] || 0) + 1;
   }
   const available = Object.keys(counts).map(Number).sort(function (a, b) { return a - b; });
-  return jsonResponse({ availableAmounts: available });
+  return jsonResponse({ availableAmounts: available, reference: issueReference() });
+}
+
+// ---- Server-issued reference (anti-fraud) ----
+//
+// The reference code shown to the customer used to be generated purely
+// client-side, which meant the backend had no way to tell a genuine
+// reference from one a fraudulent customer invented themselves (see v22
+// changelog). issueReference() now generates it here instead, on every
+// doGet() call (the same request the frontend already makes once per
+// page load to fetch available top-up amounts -- no new endpoint), and
+// logs it to the Reference sheet so doPost() can later check whether a
+// submitted reference was actually one we issued. If the Reference sheet
+// doesn't exist yet, still returns a generated code but skips logging --
+// isReferenceIssuedByUs() treats a missing sheet as "not enforced" so
+// nothing breaks before the tab is set up.
+const REF_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function issueReference() {
+  let ref = "";
+  for (let i = 0; i < 5; i++) ref += REF_CHARS[Math.floor(Math.random() * REF_CHARS.length)];
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REFERENCE_SHEET_NAME);
+  if (sheet) {
+    sheet.appendRow([ref, new Date()]);
+  }
+  return ref;
+}
+
+function isReferenceIssuedByUs(reference) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REFERENCE_SHEET_NAME);
+  if (!sheet) return true; // tab not set up yet -- don't enforce, avoid false-flagging everyone
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (normalize(String(data[i][0] || "")) === reference) return true;
+  }
+  return false;
 }
 
 function doPost(e) {
@@ -255,13 +311,14 @@ function doPost(e) {
     const tipAmount = amountCheck.tipAmount;
 
     const bankRefCheck = checkBankReferenceNumber(ocrText);
+    const refIssued = isReferenceIssuedByUs(reference);
 
     const looksValid = refMatched && amountMatched && acctMatched &&
       successMatched && bankMatched && recency.ok && bankRefCheck.ok;
 
     const props = PropertiesService.getScriptProperties();
     const autoMax = Number(props.getProperty("AUTO_APPROVE_MAX") || "0");
-    const eligibleForAuto = looksValid && costAmount <= autoMax;
+    const eligibleForAuto = looksValid && refIssued && costAmount <= autoMax;
 
     // looksValid true but not eligibleForAuto means it's only being held
     // back by AUTO_APPROVE_MAX -- a legitimate "needs a human to say OK"
@@ -271,7 +328,14 @@ function doPost(e) {
     // means a real check failed (wrong reference, wrong account, no
     // success/bank wording, too old, or a genuine amount mismatch) --
     // those are Rejected outright, not left in limbo.
-    const rowStatus = eligibleForAuto ? "Approved" : (looksValid ? "Pending Review" : "Rejected");
+    // !refIssued overrides all of that -- the submitted reference doesn't
+    // match any code this server ever generated (via doGet/issueReference),
+    // which is a strong tampering/fraud signal. It always forces Pending
+    // Review (never silently Approved, never auto-Rejected either, in
+    // case the customer's browser just failed to fetch a server-issued
+    // one and fell back to a local one) -- see v22 changelog.
+    const rowStatus = !refIssued ? "Pending Review" :
+      (eligibleForAuto ? "Approved" : (looksValid ? "Pending Review" : "Rejected"));
 
     const notes = [
       "Ref:" + refMatched, "Cost:" + amountMatched, "Acct:" + acctMatched,
@@ -283,6 +347,7 @@ function doPost(e) {
       "BankRefSeq:" + (bankRefCheck.found
         ? bankRefCheck.seq + (bankRefCheck.ok ? " (OK, last was " + bankRefCheck.lastSeen + ")" : " (<= last seen " + bankRefCheck.lastSeen + ")")
         : "not found"),
+      "RefIssued:" + refIssued + (refIssued ? "" : " (SUSPECTED FRAUD -- reference not recognized as server-issued)"),
     ].join(" | ");
 
     const row = appendResponseRow({
@@ -292,6 +357,10 @@ function doPost(e) {
       status: rowStatus,
       ocrNotes: notes,
     });
+
+    if (!refIssued) {
+      alertSuspectedFraud(reference, name, email, topupAmount, costAmount, screenshotUrl);
+    }
 
     if (eligibleForAuto && bankRefCheck.found) {
       advanceLastBankRefSeq(bankRefCheck.seq);
@@ -323,6 +392,29 @@ function doPost(e) {
 function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Immediate alert (not just the daily digest) for a submission whose
+// reference doesn't match anything issueReference() ever logged -- the
+// strongest fraud signal this system has. Never blocks the response to
+// the customer; failures here are swallowed so a broken mail send can't
+// break a real submission.
+function alertSuspectedFraud(reference, name, email, topupAmount, costAmount, screenshotUrl) {
+  try {
+    const adminEmail = PropertiesService.getScriptProperties().getProperty("ADMIN_EMAIL")
+      || Session.getEffectiveUser().getEmail();
+    MailApp.sendEmail(
+      adminEmail,
+      "Recharge system: SUSPECTED FRAUD -- unrecognized reference",
+      "A submission used a reference this server never issued (RefIssued:false).\n" +
+        "It's been recorded as Pending Review, not auto-approved or auto-rejected.\n\n" +
+        "Reference: " + reference + "\n" +
+        "Name: " + name + "\n" +
+        "Email: " + email + "\n" +
+        "Amount: $" + topupAmount + " (paid $" + costAmount + ")\n" +
+        "Screenshot: " + screenshotUrl
+    );
+  } catch (err) {}
 }
 
 function isValidEmail(email) {
