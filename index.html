@@ -365,7 +365,7 @@
       if (availableTopups && availableTopups.indexOf(p.topup) === -1) return; // hidden — out of stock
       const opt = document.createElement("option");
       opt.value = String(p.topup);
-      opt.textContent = "$" + p.topup + " top-up — pay $" + p.cost.toFixed(2);
+      opt.textContent = "$" + p.topup + " top-up";
       amountSelect.appendChild(opt);
     });
   }
