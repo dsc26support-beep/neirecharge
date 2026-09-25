@@ -71,6 +71,7 @@
     font-size: 0.85rem; color: var(--placeholder);
   }
   #amount:invalid, #amount option[value=""] { color: var(--placeholder); }
+  #amount:disabled { background: var(--bg); color: var(--placeholder); cursor: not-allowed; }
   #amount option { color: var(--text); }
   .hint { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
   .cost-display {
@@ -235,9 +236,10 @@
     <input type="email" id="email" placeholder="We'll email you your recharge number" required>
 
     <label for="amount">Top-up amount</label>
-    <select id="amount" required>
+    <select id="amount" required disabled>
       <option value="">Loading available amounts...</option>
     </select>
+    <div class="hint" id="amount-lock-hint">Fill in your full name and a valid email first</div>
     <div class="cost-display" id="cost-display">
       You will pay <b id="cost-value">—</b>.
     </div>
@@ -388,6 +390,17 @@
       if (saved && saved.email) emailInput.value = saved.email;
     } catch (e) {}
   })();
+
+  const amountLockHint = document.getElementById("amount-lock-hint");
+
+  function updateAmountLock() {
+    const ready = nameInput.value.trim() && isValidEmail(emailInput.value.trim());
+    amountSelect.disabled = !ready;
+    amountLockHint.style.display = ready ? "none" : "block";
+  }
+  nameInput.addEventListener("input", updateAmountLock);
+  emailInput.addEventListener("input", updateAmountLock);
+  updateAmountLock();
 
   let beforePayShownForSelection = false;
 
