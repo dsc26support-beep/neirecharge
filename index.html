@@ -428,6 +428,10 @@
   amountSelect.addEventListener("change", () => {
     const p = PRICING.find((x) => String(x.topup) === amountSelect.value);
     beforePayShownForSelection = false;
+    // Pay amount is about to change -- any previously copied Reference/Pay
+    // values are now stale, so require both to be copied again before upload.
+    referenceCopied = false;
+    payCopied = false;
     if (!p) {
       costDisplay.classList.remove("show");
       return;
@@ -442,11 +446,12 @@
   emailInput.addEventListener("blur", maybeShowBeforePay);
 
   let referenceCopied = false;
+  let payCopied = false;
   const beforePayError = document.getElementById("before-pay-error");
 
   beforePayOk.addEventListener("click", () => {
-    if (!referenceCopied) {
-      beforePayError.textContent = "Please copy the Reference to Recipient first.";
+    if (!referenceCopied || !payCopied) {
+      beforePayError.textContent = "Please copy the Reference to Recipient and Pay amount first.";
       beforePayError.style.display = "block";
       return;
     }
@@ -535,6 +540,10 @@
   wireCopyButton("before-pay-copy-name-btn", () => "Nei Recharge");
   wireCopyButton("before-pay-copy-acct-btn", () => "906149");
   wireCopyButton("before-pay-copy-cost-btn", () => (currentCost !== null ? currentCost.toFixed(2) : ""));
+  document.getElementById("before-pay-copy-cost-btn").addEventListener("click", () => {
+    payCopied = true;
+    beforePayError.style.display = "none";
+  });
 
   const screenshotInput = document.getElementById("screenshot");
   const fileNameDisplay = document.getElementById("file-name-display");
@@ -594,8 +603,8 @@
       amountSelect.focus();
       return false;
     }
-    if (!referenceCopied) {
-      statusEl.textContent = "Please copy the Reference to Recipient first.";
+    if (!referenceCopied || !payCopied) {
+      statusEl.textContent = "Please copy the Reference to Recipient and Pay amount first.";
       statusEl.className = "error";
       return false;
     }
