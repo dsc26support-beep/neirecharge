@@ -1,6 +1,23 @@
 /**
- * Kiribati recharge system — backend Web App (v24)
+ * Kiribati recharge system — backend Web App (v25)
  * ---------------------------------------------------
+ * Change from v24: doPost() was only rate-limited per email
+ * (RATE_LIMIT_PER_HOUR), trivially bypassed with throwaway addresses --
+ * and every submission spends shared account quota regardless of which
+ * email was used (MailApp's daily email cap, Drive storage, OCR calls).
+ * In particular, alertSuspectedFraud() fires an admin email on every
+ * submission with an unrecognized reference, so a bot rotating through
+ * fake emails and garbage references could burn through the account's
+ * daily MailApp quota on fraud alerts alone -- blocking real customers'
+ * voucher emails for the rest of the day. New
+ * isPostGloballyRateLimited() adds a site-wide cap (CacheService, no
+ * Sheet read, so it's cheap): a tight per-minute bucket
+ * (POST_RATE_LIMIT_PER_MINUTE, default 5) against a fast bot loop, and a
+ * looser per-hour bucket (POST_RATE_LIMIT_PER_HOUR, default 20) against
+ * a slow drip spread out to dodge the per-minute one. Checked first in
+ * doPost(), before any per-submission work (image decode, OCR, Drive
+ * write, email).
+ *
  * Change from v23: saveScreenshot() used to make every uploaded payment
  * screenshot ("Anyone with the link" / VIEW) -- meaning anyone who ever
  * obtained that Drive URL (forwarded in an email, pasted in a chat,
@@ -208,6 +225,9 @@
  *   New in v23 (both optional, sensible defaults if unset):
  *   GET_RATE_LIMIT_PER_MINUTE (default 60), REFERENCE_MAX_AGE_HOURS
  *   (default 6)
+ *   New in v25 (both optional, sensible defaults if unset):
+ *   POST_RATE_LIMIT_PER_MINUTE (default 5), POST_RATE_LIMIT_PER_HOUR
+ *   (default 20)
  *   Recommended BANK_KEYWORDS value based on your screenshot: "ANZ"
  *
  * IMPORTANT — Responses sheet columns changed (Phone column removed):
@@ -374,6 +394,19 @@ function doPost(e) {
   }
 
   try {
+    // Checked before the per-email limit below: that one is trivially
+    // bypassed with throwaway addresses, and each submission spends
+    // shared, real quota (MailApp's daily email cap, Drive storage, OCR
+    // calls) regardless of which email was used. A global cap bounds
+    // total damage from a bot rotating through fake emails, in
+    // particular the fraud-alert email that fires on every submission
+    // with an unrecognized reference (see alertSuspectedFraud() below) --
+    // otherwise that alone could burn through the account's daily email
+    // quota and block real customers' voucher emails for the rest of
+    // the day. See isPostGloballyRateLimited().
+    if (isPostGloballyRateLimited()) {
+      return jsonResponse({ status: "error", message: "Too many submissions right now. Please try again in a few minutes." });
+    }
     if (isRateLimited(email)) {
       return jsonResponse({ status: "error", message: "Too many submissions recently. Please try again later." });
     }
@@ -528,7 +561,32 @@ function u(b) {
   return b < 0 ? b + 256 : b;
 }
 
-// ---- Rate limiting (now email-only) ----
+// ---- Rate limiting ----
+
+// Global (site-wide, not per-email) cap on doPost(), same CacheService
+// approach as isGetGloballyRateLimited(). Two buckets: a tight per-minute
+// one to stop a fast bot loop, and a looser per-hour one to stop a slow
+// drip spread out to dodge the per-minute cap -- both cheap (no Sheet
+// read) so they run before any of the expensive per-submission work
+// below (image decode, OCR, Drive write, email). Tune via script
+// properties POST_RATE_LIMIT_PER_MINUTE / POST_RATE_LIMIT_PER_HOUR if
+// real traffic ever needs more headroom.
+function isPostGloballyRateLimited() {
+  const props = PropertiesService.getScriptProperties();
+  const perMinuteLimit = Number(props.getProperty("POST_RATE_LIMIT_PER_MINUTE") || "5");
+  const perHourLimit = Number(props.getProperty("POST_RATE_LIMIT_PER_HOUR") || "20");
+  const cache = CacheService.getScriptCache();
+
+  const minuteKey = "POST_COUNT_MIN_" + Math.floor(Date.now() / 60000);
+  if (Number(cache.get(minuteKey) || "0") >= perMinuteLimit) return true;
+
+  const hourKey = "POST_COUNT_HOUR_" + Math.floor(Date.now() / 3600000);
+  if (Number(cache.get(hourKey) || "0") >= perHourLimit) return true;
+
+  cache.put(minuteKey, String(Number(cache.get(minuteKey) || "0") + 1), 90);
+  cache.put(hourKey, String(Number(cache.get(hourKey) || "0") + 1), 3660);
+  return false;
+}
 
 function isRateLimited(email) {
   const limit = Number(PropertiesService.getScriptProperties().getProperty("RATE_LIMIT_PER_HOUR") || "3");
