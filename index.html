@@ -642,15 +642,18 @@
         screenshotPrecheckStatus = "pass";
         ocrCheckMsg.textContent = "";
         ocrCheckMsg.className = "";
+        submitBtn.textContent = "Submit";
       } else {
         screenshotPrecheckStatus = "fail";
         ocrCheckMsg.textContent = "Ahah Ko takakaro ma am screenshot?";
         ocrCheckMsg.className = "fail";
+        submitBtn.textContent = "Choose a different screenshot";
       }
     } catch (err) {
       screenshotPrecheckStatus = "unavailable";
       ocrCheckMsg.textContent = "";
       ocrCheckMsg.className = "";
+      submitBtn.textContent = "Submit";
     } finally {
       if (screenshotPrecheckStatus !== "checking") submitBtn.disabled = false;
     }
@@ -727,6 +730,7 @@
     screenshotPrecheckStatus = "none";
     ocrCheckMsg.textContent = "";
     ocrCheckMsg.className = "";
+    submitBtn.textContent = "Submit";
   }
 
   const form = document.getElementById("recharge-form");
@@ -776,6 +780,9 @@
     if (screenshotPrecheckStatus === "fail") {
       statusEl.textContent = "Ia boboa kiim ma an upload raoi ae bon te IB.";
       statusEl.className = "error";
+      screenshotInput.value = "";
+      resetScreenshotUI();
+      screenshotInput.click();
       return;
     }
 
