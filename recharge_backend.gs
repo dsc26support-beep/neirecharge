@@ -1,6 +1,24 @@
 /**
- * Kiribati recharge system — backend Web App (v23)
+ * Kiribati recharge system — backend Web App (v24)
  * ---------------------------------------------------
+ * Change from v23: saveScreenshot() used to make every uploaded payment
+ * screenshot ("Anyone with the link" / VIEW) -- meaning anyone who ever
+ * obtained that Drive URL (forwarded in an email, pasted in a chat,
+ * screen-recorded) could view the customer's banking screenshot
+ * indefinitely, no login required. This actually contradicted
+ * privacy.html's claim that screenshots are kept in a "private Google
+ * Drive folder" with access "limited to those operating the Service" --
+ * the file's own sharing setting overrode that regardless of folder
+ * permissions. It was also unnecessary: the web app runs "Execute as Me"
+ * (the script owner), so the owner already has native Drive access to
+ * every file it creates -- no public sharing needed -- and screenshotUrl
+ * is only ever used in admin-facing emails/sheet rows, never shown to
+ * the customer. setSharing() call removed; new uploads default to
+ * private (owner-only, or as explicitly shared later). NOTE: this only
+ * affects uploads from now on -- files already created under v23 or
+ * earlier keep their existing "Anyone with the link" sharing until
+ * manually changed in Drive.
+ *
  * Change from v22: doGet() had no rate limiting at all (Apps Script
  * doesn't expose the caller's IP, so per-visitor throttling isn't
  * possible here) -- and since v22 every call appends a row to the
@@ -734,7 +752,14 @@ function saveScreenshot(base64, mimeType, email) {
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType,
     "payment_" + safeEmail + "_" + new Date().getTime());
   const file = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  // Deliberately NOT setSharing(ANYONE_WITH_LINK, ...) -- these are
+  // banking screenshots, and the doGet/doPost web app already runs
+  // "Execute as Me" (the script owner), so the owner already has native
+  // Drive access to every file it creates without any public sharing.
+  // The screenshotUrl is only ever used in admin-facing emails/sheet rows
+  // (see COL.SCREENSHOT_URL, alertSuspectedFraud()) -- never shown to the
+  // customer -- so link-based public access was never actually needed,
+  // and only exposed the file to anyone who ever obtained that link.
   return file.getUrl();
 }
 
