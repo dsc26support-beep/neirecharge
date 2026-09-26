@@ -628,7 +628,7 @@
         ocrCheckMsg.className = "";
       } else {
         screenshotPrecheckStatus = "fail";
-        ocrCheckMsg.textContent = "This doesn't look like a bank payment screenshot — please upload your Internet Banking Kiribati transfer confirmation, not a photo.";
+        ocrCheckMsg.textContent = "Ko takakaro ma am screenshot? Anne ngkoe ia butiko...";
         ocrCheckMsg.className = "fail";
       }
     } catch (err) {
@@ -758,7 +758,7 @@
       return;
     }
     if (screenshotPrecheckStatus === "fail") {
-      statusEl.textContent = "This doesn't look like a bank payment screenshot. Please upload your Internet Banking Kiribati transfer confirmation.";
+      statusEl.textContent = "Ia boboa kiim ma an upload raoi ae bon te IB transfer.";
       statusEl.className = "error";
       return;
     }
