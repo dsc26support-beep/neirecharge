@@ -241,7 +241,7 @@
   </div>
 
   <form id="recharge-form">
-    <label for="name">Full name</label>
+    <label for="name">Name</label>
     <input type="text" id="name" required>
 
     <label for="email">Email address</label>
@@ -251,7 +251,7 @@
     <select id="amount" required disabled>
       <option value="">Loading available amounts...</option>
     </select>
-    <div class="hint" id="amount-lock-hint">Fill in your full name and a valid email first</div>
+    <div class="hint" id="amount-lock-hint">Fill in your name and a valid email first</div>
     <div class="cost-display" id="cost-display">
       You will pay <b id="cost-value">—</b>.
     </div>
@@ -655,7 +655,7 @@
     statusEl.textContent = "";
     statusEl.className = "";
     if (!nameInput.value.trim()) {
-      statusEl.textContent = "Please enter your full name first.";
+      statusEl.textContent = "Please enter your name first.";
       statusEl.className = "error";
       nameInput.focus();
       return false;
