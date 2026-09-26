@@ -479,6 +479,14 @@
     costValueEl.textContent = "$" + p.cost.toFixed(2);
     costDisplay.classList.add("show");
 
+    // Clear a stale "Please select a top-up amount first" error left over
+    // from an earlier Upload/Submit attempt, now that an amount is picked.
+    if (statusEl.textContent === "Please select a top-up amount first." ||
+        statusEl.textContent === "Please select an amount.") {
+      statusEl.textContent = "";
+      statusEl.className = "";
+    }
+
     maybeShowBeforePay();
   });
 
@@ -608,6 +616,10 @@
       fileNameDisplay.classList.add("hidden");
       screenshotInfoBtn.classList.add("hidden");
       screenshotCheck.classList.add("show");
+      if (statusEl.textContent === "Please attach a screenshot.") {
+        statusEl.textContent = "";
+        statusEl.className = "";
+      }
       runScreenshotPrecheck(file);
     } else {
       uploadBtnLabel.textContent = "Upload Screenshot";
