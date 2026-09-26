@@ -1,6 +1,23 @@
 /**
- * Kiribati recharge system — backend Web App (v22)
+ * Kiribati recharge system — backend Web App (v23)
  * ---------------------------------------------------
+ * Change from v22: doGet() had no rate limiting at all (Apps Script
+ * doesn't expose the caller's IP, so per-visitor throttling isn't
+ * possible here) -- and since v22 every call appends a row to the
+ * Reference sheet, so unthrottled traffic (a bot, a script hammering the
+ * endpoint) could grow that sheet without bound and eventually break the
+ * site. Two fixes: isGetGloballyRateLimited() caps total doGet() calls
+ * per minute, site-wide, using CacheService (script property
+ * GET_RATE_LIMIT_PER_MINUTE, default 60); and pruneOldReferences() (new
+ * trigger, run createReferencePruneTrigger() once) deletes Reference
+ * rows older than REFERENCE_MAX_AGE_HOURS (default 6 -- generous past
+ * the site's 1-hour submission policy) every hour, so the sheet stays
+ * bounded even if the rate cap is ever raised. Neither change affects
+ * the frontend: when rate-limited, doGet() returns
+ * { availableAmounts: null, reference: null }, which the existing
+ * frontend fallback logic already handles (shows all pricing options,
+ * uses a locally-generated reference).
+ *
  * Change from v21: closes a real fraud gap -- the payment reference
  * code used to be generated entirely client-side (in index.html), so
  * the backend had no way to tell a genuine reference from one a
@@ -166,10 +183,13 @@
  * dials it on whichever phone they're topping up). Rate limiting and
  * screenshot filenames now key off email instead of phone.
  *
- * SETUP — Script Properties (unchanged from v5):
+ * SETUP — Script Properties (unchanged from v5, plus v23's two below):
  *   AUTO_APPROVE_MAX, SCREENSHOT_FOLDER_ID, BANK_KEYWORDS,
  *   RATE_LIMIT_PER_HOUR, MIN_IMAGE_BYTES, MAX_TRANSACTION_AGE_HOURS,
  *   ADMIN_EMAIL
+ *   New in v23 (both optional, sensible defaults if unset):
+ *   GET_RATE_LIMIT_PER_MINUTE (default 60), REFERENCE_MAX_AGE_HOURS
+ *   (default 6)
  *   Recommended BANK_KEYWORDS value based on your screenshot: "ANZ"
  *
  * IMPORTANT — Responses sheet columns changed (Phone column removed):
@@ -184,6 +204,8 @@
  *     v2 or v3 works, ocrImage() below detects which one is enabled)
  *   - Run createApprovalTrigger() once for the manual-approval fallback
  *   - Run createDailyDigestTrigger() once for the pending-review digest
+ *   - Run createReferencePruneTrigger() once (v23) to keep the
+ *     Reference sheet from growing unbounded
  *   - Deploy > New deployment > Web app, Execute as Me, Access: Anyone
  */
 
@@ -203,6 +225,19 @@ const COL = {
 // ---- Availability check (front end hides sold-out denominations) ----
 
 function doGet(e) {
+  // doGet is unauthenticated and unthrottled by Apps Script itself (it
+  // doesn't even expose the caller's IP to the script), and every call
+  // appends a row to the Reference sheet (see issueReference() below) --
+  // so without a cap here, a script or bot hammering this endpoint could
+  // grow that sheet without limit and eventually break the whole site.
+  // This is a coarse, best-effort global (site-wide, not per-visitor)
+  // cap -- see isGetGloballyRateLimited(). Old Reference rows are also
+  // pruned on a schedule (pruneOldReferences()) as a second line of
+  // defense in case this cap is ever raised or bypassed.
+  if (isGetGloballyRateLimited()) {
+    return jsonResponse({ availableAmounts: null, reference: null });
+  }
+
   const vSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VOUCHERS_SHEET_NAME);
   const data = vSheet.getDataRange().getValues();
   const counts = {};
@@ -213,6 +248,23 @@ function doGet(e) {
   }
   const available = Object.keys(counts).map(Number).sort(function (a, b) { return a - b; });
   return jsonResponse({ availableAmounts: available, reference: issueReference() });
+}
+
+// Coarse global throttle on doGet(), bucketed per minute in CacheService
+// (fast, no Sheet read needed). Not perfectly atomic under heavy concurrent
+// load, but that's fine for its purpose here -- it only needs to stop
+// sustained abuse, not enforce an exact count. Default cap is generous for
+// real visitors (each page load is one call) while still bounding how fast
+// the Reference sheet can grow. Tune via script property
+// GET_RATE_LIMIT_PER_MINUTE if it's ever too tight/loose in practice.
+function isGetGloballyRateLimited() {
+  const limit = Number(PropertiesService.getScriptProperties().getProperty("GET_RATE_LIMIT_PER_MINUTE") || "60");
+  const cache = CacheService.getScriptCache();
+  const bucketKey = "GET_COUNT_" + Math.floor(Date.now() / 60000);
+  const current = Number(cache.get(bucketKey) || "0");
+  if (current >= limit) return true;
+  cache.put(bucketKey, String(current + 1), 90);
+  return false;
 }
 
 // ---- Server-issued reference (anti-fraud) ----
@@ -248,6 +300,35 @@ function isReferenceIssuedByUs(reference) {
     if (normalize(String(data[i][0] || "")) === reference) return true;
   }
   return false;
+}
+
+// A reference only ever needs to stay valid for the payment window (the
+// site's own 1-hour policy), so nothing legitimate needs a row older than
+// a few hours -- this prunes anything past that, keeping the Reference
+// sheet bounded no matter how much doGet() traffic comes in (on top of the
+// isGetGloballyRateLimited() cap above). Runs on a schedule, not inline in
+// doGet(), so a normal page load never pays for a sheet rewrite. Tune the
+// cutoff via script property REFERENCE_MAX_AGE_HOURS if needed.
+function pruneOldReferences() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REFERENCE_SHEET_NAME);
+  if (!sheet) return;
+  const maxAgeHours = Number(PropertiesService.getScriptProperties().getProperty("REFERENCE_MAX_AGE_HOURS") || "6");
+  const cutoff = new Date(Date.now() - maxAgeHours * 3600000);
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    const issuedAt = new Date(data[i][1]);
+    if (issuedAt < cutoff) sheet.deleteRow(i + 1);
+  }
+}
+
+function createReferencePruneTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === "pruneOldReferences") ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("pruneOldReferences")
+    .timeBased()
+    .everyHours(1)
+    .create();
 }
 
 function doPost(e) {
