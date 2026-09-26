@@ -80,8 +80,19 @@
   #amount option { color: var(--text); }
   .hint { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
   #ocr-check-msg { font-size: 0.8rem; margin-top: 6px; text-align: center; }
-  #ocr-check-msg.checking { color: var(--muted); }
+  #ocr-check-msg.checking {
+    font-weight: 600;
+    background: linear-gradient(90deg, var(--border) 0%, var(--accent) 50%, var(--border) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    animation: ocr-shimmer 1.4s linear infinite;
+  }
   #ocr-check-msg.fail { color: var(--error); font-weight: 600; }
+  @keyframes ocr-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
   .cost-display {
     margin-top: 10px; margin-bottom: 20px; padding: 10px 12px; border-radius: 8px;
     background: #f5f3ff; border: 1px solid var(--border); font-size: 0.95rem;
