@@ -8,6 +8,7 @@
 <link rel="icon" href="favicon-32x32.png" type="image/png" sizes="32x32">
 <link rel="icon" href="favicon-16x16.png" type="image/png" sizes="16x16">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" defer></script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#7c3aed">
 <style>
@@ -78,6 +79,9 @@
   #amount:disabled { background: var(--bg); color: var(--placeholder); cursor: not-allowed; }
   #amount option { color: var(--text); }
   .hint { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  #ocr-check-msg { font-size: 0.8rem; margin-top: 6px; }
+  #ocr-check-msg.checking { color: var(--muted); }
+  #ocr-check-msg.fail { color: var(--error); font-weight: 600; }
   .cost-display {
     margin-top: 10px; margin-bottom: 20px; padding: 10px 12px; border-radius: 8px;
     background: #f5f3ff; border: 1px solid var(--border); font-size: 0.95rem;
@@ -265,6 +269,7 @@
       <div id="file-name-display">No file selected</div>
     </div>
     <button type="button" id="screenshot-check" class="screenshot-check">&#10003;</button>
+    <div id="ocr-check-msg"></div>
 
     <button type="submit" id="submit-btn">Submit</button>
     <div id="status"></div>
@@ -345,6 +350,8 @@
 <script>
   // Replace with your deployed Apps Script Web App URL (ends in /exec)
   const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzsVG28G1xvNkA5gqLVTDw6qtM7SSnacp4lGklef1AEneNwulpTPNPNciLke-pRA3LR/exec";
+
+  const ACCOUNT_NUMBER = "906149";
 
   // Top-up value -> amount the buyer actually pays (includes fee).
   const PRICING = [
@@ -564,6 +571,9 @@
   const screenshotPreviewClose = document.getElementById("screenshot-preview-close");
   const screenshotChangeBtn = document.getElementById("screenshot-change-btn");
 
+  const ocrCheckMsg = document.getElementById("ocr-check-msg");
+  let screenshotPrecheckStatus = "none"; // none | checking | pass | fail | unavailable
+
   screenshotInput.addEventListener("change", () => {
     const file = screenshotInput.files[0];
     if (file) {
@@ -571,14 +581,64 @@
       fileNameDisplay.classList.add("hidden");
       screenshotInfoBtn.classList.add("hidden");
       screenshotCheck.classList.add("show");
+      runScreenshotPrecheck(file);
     } else {
       uploadBtnLabel.textContent = "Upload Screenshot";
       fileNameDisplay.textContent = "No file selected";
       fileNameDisplay.classList.remove("hidden");
       screenshotInfoBtn.classList.remove("hidden");
       screenshotCheck.classList.remove("show");
+      screenshotPrecheckStatus = "none";
+      ocrCheckMsg.textContent = "";
+      ocrCheckMsg.className = "";
     }
   });
+
+  // Client-side pre-check: catches an obviously-wrong upload (a selfie, a
+  // random photo) before Submit, so the customer isn't left waiting for the
+  // server round-trip to find out. Mirrors a subset of the server's OCR
+  // checks (account number / reference / success wording) using Tesseract.js
+  // running in the browser. Deliberately lenient: only blocks when NONE of
+  // these show up, and any OCR failure/timeout falls through to "unavailable"
+  // (submit proceeds) since the server always re-checks anyway.
+  async function runScreenshotPrecheck(file) {
+    screenshotPrecheckStatus = "checking";
+    ocrCheckMsg.textContent = "Checking screenshot…";
+    ocrCheckMsg.className = "checking";
+    submitBtn.disabled = true;
+
+    try {
+      if (typeof Tesseract === "undefined") {
+        screenshotPrecheckStatus = "unavailable";
+        ocrCheckMsg.textContent = "";
+        ocrCheckMsg.className = "";
+        return;
+      }
+      const result = await Tesseract.recognize(file, "eng");
+      const text = (result && result.data && result.data.text) || "";
+      const normalized = text.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+      const hasAccount = normalized.indexOf(ACCOUNT_NUMBER) !== -1;
+      const hasRef = normalized.indexOf(reference.toUpperCase()) !== -1;
+      const hasSuccessWord = /(SUCCESSFUL|COMPLETED|CONFIRMED|APPROVED|RECEIPT|SUCCESS|POSTED)/.test(normalized);
+
+      if (hasAccount || hasRef || hasSuccessWord) {
+        screenshotPrecheckStatus = "pass";
+        ocrCheckMsg.textContent = "";
+        ocrCheckMsg.className = "";
+      } else {
+        screenshotPrecheckStatus = "fail";
+        ocrCheckMsg.textContent = "This doesn't look like a bank payment screenshot — please upload your Internet Banking Kiribati transfer confirmation, not a photo.";
+        ocrCheckMsg.className = "fail";
+      }
+    } catch (err) {
+      screenshotPrecheckStatus = "unavailable";
+      ocrCheckMsg.textContent = "";
+      ocrCheckMsg.className = "";
+    } finally {
+      if (screenshotPrecheckStatus !== "checking") submitBtn.disabled = false;
+    }
+  }
 
   function showScreenshotPreview() {
     const file = screenshotInput.files[0];
@@ -648,6 +708,9 @@
     fileNameDisplay.classList.remove("hidden");
     screenshotInfoBtn.classList.remove("hidden");
     screenshotCheck.classList.remove("show");
+    screenshotPrecheckStatus = "none";
+    ocrCheckMsg.textContent = "";
+    ocrCheckMsg.className = "";
   }
 
   const form = document.getElementById("recharge-form");
@@ -686,6 +749,16 @@
     }
     if (!screenshotInput.files[0]) {
       statusEl.textContent = "Please attach a screenshot.";
+      statusEl.className = "error";
+      return;
+    }
+    if (screenshotPrecheckStatus === "checking") {
+      statusEl.textContent = "Still checking your screenshot — please wait a moment and press Submit again.";
+      statusEl.className = "error";
+      return;
+    }
+    if (screenshotPrecheckStatus === "fail") {
+      statusEl.textContent = "This doesn't look like a bank payment screenshot. Please upload your Internet Banking Kiribati transfer confirmation.";
       statusEl.className = "error";
       return;
     }
