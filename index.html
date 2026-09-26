@@ -424,6 +424,22 @@
   emailInput.addEventListener("input", updateAmountLock);
   updateAmountLock();
 
+  // Clear a stale "Please enter your name/email first" error left over from
+  // an earlier Upload/Submit attempt once the field it complained about is
+  // actually filled in (e.g. autofill lands after the error was shown).
+  nameInput.addEventListener("input", () => {
+    if (nameInput.value.trim() && statusEl.textContent === "Please enter your name first.") {
+      statusEl.textContent = "";
+      statusEl.className = "";
+    }
+  });
+  emailInput.addEventListener("input", () => {
+    if (isValidEmail(emailInput.value.trim()) && statusEl.textContent === "Please enter a valid email address first.") {
+      statusEl.textContent = "";
+      statusEl.className = "";
+    }
+  });
+
   let beforePayShownForSelection = false;
 
   function maybeShowBeforePay() {
